@@ -1,0 +1,1 @@
+Import mmcoe_library.sql into MySQL 8.x. The dump creates the mmcoe_library database and the supplied admins, books, issued_books, librarian and users tables/data. The Java layer adds department and rack_number to books automatically when needed.

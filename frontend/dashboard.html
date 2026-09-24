@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMCOE Library - Student Portal</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="js/api.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6d0000",
+                        primaryDark: "#4A0000",
+                        primaryLight: "#980000",
+                        crimson: "#C41E3A",
+                        background: "#fffaf9",
+                        surface: "#ffffff",
+                        surfaceLow: "#fff1ef",
+                        textMain: "#1f1412",
+                        textMuted: "#6e5551",
+                        border: "#ebd6d2",
+                        borderDark: "#d5afaa"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .toast-enter {
+            animation: slideInDown 0.3s ease-out;
+        }
+        @keyframes slideInDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes skeletonPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.3; }
+        }
+        .skeleton {
+            animation: skeletonPulse 1.5s ease-in-out infinite;
+            background-color: var(--border);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-background antialiased flex flex-col lg:flex-row relative">
+
+    <!-- Toast Notification Overlay -->
+    <div id="toastNotification" class="hidden fixed top-4 right-4 z-50 bg-primary text-white px-4 py-3 rounded-lg shadow-md border border-primaryLight flex items-center gap-2.5 text-xs font-medium toast-enter">
+        <span class="material-symbols-outlined text-[18px]" id="toastIcon">check_circle</span>
+        <p id="toastMessage">Action completed successfully!</p>
+    </div>
+
+    <!-- Desktop Sidebar (240px wide) -->
+    <aside id="appSidebar" class="hidden lg:flex flex-col w-60 bg-surface border-r border-border fixed top-0 bottom-0 left-0 z-30">
+        <!-- Sidebar Brand Top -->
+        <div class="h-14 px-5 border-b border-border flex items-center gap-3">
+            <img src="logo.jpg" alt="MMCOE Logo" class="w-8 h-8 object-contain">
+            <div>
+                <h1 class="text-sm font-bold text-primary leading-none">MMCOE Library</h1>
+                <p class="text-[10px] text-textMuted uppercase tracking-wider mt-0.5">Student Portal</p>
+            </div>
+        </div>
+
+        <!-- Sidebar Navigation Menu -->
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn nav-item active w-full">
+                <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                <span>Overview</span>
+            </button>
+            <button onclick="switchTab('opac')" id="tab-opac" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                <span>Browse Catalogue</span>
+            </button>
+            <button onclick="switchTab('requests')" id="tab-requests" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">pending_actions</span>
+                <span>My Requests & Queue</span>
+            </button>
+            <button onclick="switchTab('issued')" id="tab-issued" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">auto_stories</span>
+                <span>My Issued Books</span>
+            </button>
+            <button onclick="switchTab('fines')" id="tab-fines" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">payments</span>
+                <span>My Fines</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar User Footer -->
+        <div class="p-3 border-t border-border space-y-2">
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surfaceLow transition cursor-pointer" onclick="showProfileModal()">
+                <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-xs shrink-0" id="userAvatar">
+                    U
+                </div>
+                <div class="truncate text-left">
+                    <p class="text-xs font-semibold text-textMain truncate" id="userName">Student User</p>
+                    <p class="text-[10px] text-textMuted uppercase truncate" id="userRole">Student · CE</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="btn-ghost w-full justify-start text-xs text-textMuted hover:text-danger">
+                <span class="material-symbols-outlined text-[18px]">logout</span>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Right Content Wrapper -->
+    <div class="flex-1 lg:ml-60 flex flex-col min-w-0">
+
+        <!-- Slim Top Bar (56px) -->
+        <header class="h-14 bg-surface border-b border-border sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <h2 class="text-sm font-semibold text-textMain">Central Library Portal</h2>
+            </div>
+
+            <!-- Right Controls: Notification Bell + User Profile -->
+            <div class="flex items-center gap-3">
+                <!-- Notification Bell Popover -->
+                <div class="relative">
+                    <button onclick="toggleNotificationPanel()" class="btn-ghost w-9 h-9 p-0 rounded-full relative text-textMuted hover:text-primary">
+                        <span class="material-symbols-outlined text-[20px]">notifications</span>
+                        <span id="unreadNotifBadge" class="hidden absolute top-1 right-1 bg-crimson text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    </button>
+                    
+                    <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 ui-card p-4 space-y-3 z-50">
+                        <div class="flex items-center justify-between border-b border-border pb-2">
+                            <h4 class="font-semibold text-xs text-textMain flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px] text-primary">notifications</span>
+                                Notifications
+                            </h4>
+                            <button onclick="handleMarkAllNotificationsRead()" class="btn-ghost text-[11px] h-6 px-2">Mark all read</button>
+                        </div>
+                        <div id="notificationList" class="max-h-72 overflow-y-auto space-y-2 text-xs">
+                            <p class="text-textMuted text-center py-4 italic">Loading notifications...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Action -->
+                <button onclick="showProfileModal()" class="w-8 h-8 rounded-full bg-surfaceLow border border-border flex items-center justify-center text-xs font-semibold text-primary hover:border-primary transition">
+                    <span class="material-symbols-outlined text-[18px]">account_circle</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace (max-w-6xl) -->
+        <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8">
+            
+            <!-- TAB 1: OVERVIEW -->
+            <div id="view-overview" class="space-y-6">
+                
+                <!-- Quiet Greeting Row -->
+                <div class="ui-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-textMain tracking-tight" id="welcomeHeading">Welcome back, Student!</h2>
+                        <p class="text-xs text-textMuted mt-1">Access course textbooks, check copy availability, submit issue requests, and track due dates.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="switchTab('opac')" class="btn-primary">
+                            <span class="material-symbols-outlined text-[18px]">search</span>
+                            <span>Browse Catalogue</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Summary Tiles -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div onclick="switchTab('issued')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Active Borrowed Books</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statActiveLoans">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">View active loans <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('requests')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Pending Requests</p>
+                        <p class="text-2xl font-semibold text-warning tracking-tight" id="statPendingReqs">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Track request status <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('fines')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Overdue Fine Balance</p>
+                        <p class="text-2xl font-semibold text-danger tracking-tight" id="statFine">₹0.00</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Check fine details <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('requests')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Waitlist Queue Position</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statWaitlist">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">View queue status <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+                </div>
+
+                <!-- Featured Textbooks -->
+                <div class="ui-card p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-semibold text-textMain">Featured Engineering Textbooks</h3>
+                            <p class="text-xs text-textMuted mt-0.5">Recommended books for current semester courses</p>
+                        </div>
+                        <button onclick="switchTab('opac')" class="btn-ghost text-xs">Browse All</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="overviewBooksContainer">
+                        <div class="ui-card p-4 space-y-2"><div class="h-4 w-20 skeleton rounded"></div><div class="h-5 w-3/4 skeleton rounded"></div><div class="h-4 w-1/2 skeleton rounded"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: WEB OPAC CATALOGUE -->
+            <div id="view-opac" class="space-y-4 hidden">
+                <div class="ui-card p-5 space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-semibold text-textMain">Library OPAC Catalogue</h2>
+                            <p class="text-xs text-textMuted mt-0.5">Search central library physical book records by title, author, category, or ISBN</p>
+                        </div>
+                    </div>
+
+                    <!-- Search Controls -->
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div class="sm:col-span-8 relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-textMuted text-[18px]">search</span>
+                            <input type="text" id="opacSearchInput" oninput="handleTrieSearchInput(this.value)" placeholder="Search title, author, ISBN (Trie Indexed)..." class="ui-input pl-10" autocomplete="off">
+                            <div id="trieSuggestDropdown" class="hidden absolute left-0 right-0 top-full mt-1 ui-card z-50 overflow-hidden text-xs divide-y divide-border"></div>
+                        </div>
+                        <div class="sm:col-span-4">
+                            <select id="opacDeptFilter" onchange="renderOPAC()" class="ui-input bg-white">
+                                <option value="all">All Departments</option>
+                                <option value="Computer Engineering">Computer Engineering</option>
+                                <option value="Information Technology">Information Technology</option>
+                                <option value="AI & Data Science">AI & Data Science</option>
+                                <option value="E&TC Engineering">E&TC Engineering</option>
+                                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Trie Metadata Pill -->
+                    <div id="triePerfPill" class="hidden p-3 rounded-lg bg-surface-low border border-border flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                        <div class="flex items-center gap-2">
+                            <span class="chip chip-info">TRIE O(K)</span>
+                            <span class="text-textMuted" id="triePerfStruct">Structure: Trie</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-success font-semibold" id="triePerfTime">Latency: 0 µs</span>
+                            <span class="text-textMuted" id="triePerfScanned">Scanned: 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPAC Books Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="opacGrid"></div>
+            </div>
+
+            <!-- TAB 3: MY REQUESTS & QUEUE -->
+            <div id="view-requests" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Submitted Requests -->
+                    <div class="lg:col-span-7 ui-card p-6 space-y-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">pending_actions</span>
+                                My Borrowing Requests
+                            </h2>
+                            <p class="text-xs text-textMuted mt-0.5">Submitted issue requests awaiting librarian approval</p>
+                        </div>
+                        <div class="space-y-2" id="userIssueRequestsList"></div>
+                    </div>
+
+                    <!-- FCFS Waitlist -->
+                    <div class="lg:col-span-5 ui-card p-6 space-y-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">hourglass_bottom</span>
+                                My Waitlist Positions
+                            </h3>
+                            <p class="text-xs text-textMuted mt-0.5">First-Come, First-Served priority waitlists for out-of-stock books</p>
+                        </div>
+                        <div id="userWaitlistStatusList" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: MY ISSUED BOOKS -->
+            <div id="view-issued" class="space-y-4 hidden">
+                <div class="ui-card p-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-semibold text-textMain">Currently Issued Books</h2>
+                            <p class="text-xs text-textMuted mt-0.5">Track return due dates and active borrowings</p>
+                        </div>
+                        <button onclick="switchTab('opac')" class="btn-primary">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            <span>Browse Books</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Book Title & Author</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="issuedTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: MY FINES -->
+            <div id="view-fines" class="space-y-4 hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="ui-card p-5 space-y-1">
+                        <p class="text-xs font-medium text-textMuted">Total Fine Due</p>
+                        <p class="text-2xl font-semibold text-danger" id="fineTabTotal">₹0.00</p>
+                    </div>
+                    <div class="ui-card p-5 space-y-1">
+                        <p class="text-xs font-medium text-textMuted">Penalty Rate</p>
+                        <p class="text-base font-semibold text-textMain">₹6.00 / day</p>
+                    </div>
+                    <div class="ui-card p-5 space-y-1">
+                        <p class="text-xs font-medium text-textMuted">Clearance Desk</p>
+                        <p class="text-xs font-medium text-textMain">Central Library Desk</p>
+                    </div>
+                </div>
+
+                <div class="ui-card p-6 space-y-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-textMain">Overdue Fines Breakdown</h2>
+                        <p class="text-xs text-textMuted mt-0.5">List of overdue books, calculated penalty fees, and clearance status</p>
+                    </div>
+
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Book Title</th>
+                                    <th>Due Date</th>
+                                    <th>Daily Rate</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Fine Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation (<1024px) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface border-t border-border grid grid-cols-5 z-40">
+        <button onclick="switchTab('overview')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-overview">
+            <span class="material-symbols-outlined text-[20px]">dashboard</span>
+            <span class="text-[10px] font-medium">Home</span>
+        </button>
+        <button onclick="switchTab('opac')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-opac">
+            <span class="material-symbols-outlined text-[20px]">menu_book</span>
+            <span class="text-[10px] font-medium">Catalogue</span>
+        </button>
+        <button onclick="switchTab('requests')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-requests">
+            <span class="material-symbols-outlined text-[20px]">pending_actions</span>
+            <span class="text-[10px] font-medium">Requests</span>
+        </button>
+        <button onclick="switchTab('issued')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-issued">
+            <span class="material-symbols-outlined text-[20px]">auto_stories</span>
+            <span class="text-[10px] font-medium">Issued</span>
+        </button>
+        <button onclick="switchTab('fines')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-fines">
+            <span class="material-symbols-outlined text-[20px]">payments</span>
+            <span class="text-[10px] font-medium">Fines</span>
+        </button>
+    </nav>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-sm p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3">
+                <h3 class="font-semibold text-base text-textMain">Student Profile</h3>
+                <button onclick="closeProfileModal()" class="btn-ghost h-7 w-7 p-0 rounded-full"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-surface-low rounded-lg border border-border">
+                <div class="w-10 h-10 rounded-full bg-primary text-white text-base font-semibold flex items-center justify-center" id="profileAvatar">U</div>
+                <div class="truncate">
+                    <h4 class="font-semibold text-sm text-textMain truncate" id="profileName">Student User</h4>
+                    <p class="text-xs text-textMuted font-mono truncate" id="profileEmail">student@mmcoe.edu.in</p>
+                    <span class="chip chip-info mt-1" id="profileRoleTag">STUDENT</span>
+                </div>
+            </div>
+            <div class="space-y-2 text-xs text-textMuted">
+                <div class="flex justify-between py-1 border-b border-border"><span>Department:</span><strong class="text-textMain" id="profileDept">Computer Engineering</strong></div>
+                <div class="flex justify-between py-1"><span>Institute:</span><strong class="text-textMain">MMCOE Pune</strong></div>
+            </div>
+            <button onclick="closeProfileModal()" class="btn-primary w-full">Close</button>
+        </div>
+    </div>
+
+    <!-- Return Book Modal -->
+    <div id="returnConfirmModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-sm p-6 space-y-4 text-center">
+            <span class="material-symbols-outlined text-[32px] text-primary">keyboard_return</span>
+            <h3 class="font-semibold text-base text-textMain">Confirm Book Return</h3>
+            <div class="p-3 bg-surface-low rounded-lg border border-border text-left space-y-1.5 text-xs">
+                <div class="flex justify-between"><span class="text-textMuted">Title:</span><strong class="text-textMain" id="returnBookTitle">Textbook</strong></div>
+                <div class="flex justify-between"><span class="text-textMuted">Due Date:</span><strong class="text-primary" id="returnDueDate">-</strong></div>
+                <div class="flex justify-between"><span class="text-textMuted">Status:</span><span id="returnStatus" class="chip chip-info">ISSUED</span></div>
+                <div id="returnFineInfo" class="hidden pt-1 border-t border-border text-right text-danger font-medium"></div>
+            </div>
+            <p class="text-xs text-danger font-medium">Confirm returning your active loan to the library desk.</p>
+            <div class="flex gap-2">
+                <button onclick="closeReturnConfirmModal()" class="btn-secondary flex-1">Cancel</button>
+                <button id="confirmReturnActionBtn" class="btn-primary flex-1">Confirm Return</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Waitlist Modal -->
+    <div id="leaveWaitlistModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-sm p-6 space-y-4 text-center">
+            <span class="material-symbols-outlined text-[32px] text-warning">output</span>
+            <h3 class="font-semibold text-base text-textMain">Leave Waitlist</h3>
+            <p class="text-xs text-textMuted">Are you sure you want to cancel your position in the waitlist for <strong id="leaveWaitlistBookTitle">this book</strong>?</p>
+            <div class="flex gap-2">
+                <button onclick="closeLeaveWaitlistModal()" class="btn-secondary flex-1">Cancel</button>
+                <button id="confirmLeaveWaitlistBtn" class="btn-danger flex-1">Leave Waitlist</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Borrowing Limit Reached Modal -->
+    <div id="limitReachedModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-sm p-6 space-y-4 text-center">
+            <span class="material-symbols-outlined text-[32px] text-danger">block</span>
+            <div>
+                <h3 class="font-semibold text-base text-textMain">Borrowing Limit Reached</h3>
+                <p class="text-xs text-textMuted mt-1" id="limitModalMessage">You have reached the maximum allowed limit for active books or pending requests.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closeLimitModal()" class="btn-secondary flex-1">Got It</button>
+                <button onclick="closeLimitModal(); switchTab('requests');" class="btn-primary flex-1">My Requests</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let activeReturnLoanId = null;
+        let activeLeaveWaitlistId = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = sessionStorage.getItem("currentUser");
+            if (!userStr) {
+                window.location.href = "login.html";
+                return;
+            }
+            currentUser = JSON.parse(userStr);
+            document.getElementById("userName").textContent = currentUser.name || "Student User";
+            document.getElementById("userRole").textContent = (currentUser.role || "student").toUpperCase() + " · " + (currentUser.department || "CE");
+            document.getElementById("welcomeHeading").textContent = `Welcome back, ${currentUser.name}!`;
+            document.getElementById("userAvatar").textContent = (currentUser.name || "U")[0].toUpperCase();
+
+            loadDashboardData();
+            loadNotifications();
+        });
+
+        function showLimitModal(msg) {
+            const modal = document.getElementById("limitReachedModal");
+            const msgEl = document.getElementById("limitModalMessage");
+            if (msgEl) msgEl.textContent = msg || "You have reached the maximum allowed limit for active books or pending requests.";
+            if (modal) modal.classList.remove("hidden");
+        }
+
+        function closeLimitModal() {
+            const modal = document.getElementById("limitReachedModal");
+            if (modal) modal.classList.add("hidden");
+        }
+
+        function showToast(message, type = "success") {
+            if (message && (message.toLowerCase().includes("limit") || message.toLowerCase().includes("quota"))) {
+                showLimitModal(message);
+                return;
+            }
+
+            const toast = document.getElementById("toastNotification");
+            const toastMsg = document.getElementById("toastMessage");
+            const toastIcon = document.getElementById("toastIcon");
+
+            toastMsg.textContent = message;
+            toastIcon.textContent = type === "error" ? "error" : type === "warning" ? "warning" : "check_circle";
+
+            if (type === "error") {
+                toast.className = "fixed top-4 right-4 z-50 bg-danger text-white px-4 py-3 rounded-lg shadow-md border border-red-700 flex items-center gap-2.5 text-xs font-medium toast-enter";
+            } else if (type === "warning") {
+                toast.className = "fixed top-4 right-4 z-50 bg-warning text-white px-4 py-3 rounded-lg shadow-md border border-amber-700 flex items-center gap-2.5 text-xs font-medium toast-enter";
+            } else {
+                toast.className = "fixed top-4 right-4 z-50 bg-primary text-white px-4 py-3 rounded-lg shadow-md border border-primaryLight flex items-center gap-2.5 text-xs font-medium toast-enter";
+            }
+
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 3500);
+        }
+
+        function toggleNotificationPanel() {
+            const panel = document.getElementById("notificationDropdown");
+            panel.classList.toggle("hidden");
+            if (!panel.classList.contains("hidden")) {
+                loadNotifications();
+            }
+        }
+
+        async function loadNotifications() {
+            if (!currentUser) return;
+            try {
+                const notifications = await LibraryAPI.getNotifications(currentUser.userId, currentUser.role || 'user');
+                const unreadCount = await LibraryAPI.getUnreadNotificationsCount(currentUser.userId, currentUser.role || 'user');
+                
+                const badge = document.getElementById("unreadNotifBadge");
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                    badge.classList.remove("hidden");
+                } else {
+                    badge.classList.add("hidden");
+                }
+
+                const container = document.getElementById("notificationList");
+                if (notifications.length === 0) {
+                    container.innerHTML = `<p class="text-textMuted text-center py-4 italic text-xs">No notifications yet.</p>`;
+                    return;
+                }
+
+                container.innerHTML = notifications.map(n => `
+                    <div class="p-3 rounded-lg border ${n.is_read ? 'bg-white border-border' : 'bg-surface-low border-border font-medium'} text-xs space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold ${n.type.includes('APPROVED') || n.type.includes('AVAILABLE') ? 'text-success' : n.type.includes('REJECTED') || n.type.includes('EXPIRED') ? 'text-danger' : 'text-primary'}">${n.title}</span>
+                            <span class="text-[10px] text-textMuted font-mono">${n.created_at ? n.created_at.substring(0,10) : ''}</span>
+                        </div>
+                        <p class="text-[11px] text-textMain">${n.message}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("Notifications error:", e);
+            }
+        }
+
+        async function handleMarkAllNotificationsRead() {
+            await LibraryAPI.markAllNotificationsRead(currentUser.userId, currentUser.role || 'user');
+            loadNotifications();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            const targetBtn = document.getElementById(`tab-${tabId}`);
+            if (targetBtn) targetBtn.classList.add("active");
+            const mobileBtn = document.getElementById(`mobile-tab-${tabId}`);
+            if (mobileBtn) mobileBtn.classList.add("active");
+
+            ["overview", "opac", "requests", "issued", "fines"].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.add("hidden");
+            });
+
+            const targetView = document.getElementById(`view-${tabId}`);
+            if (targetView) targetView.classList.remove("hidden");
+
+            if (tabId === "opac") renderOPAC();
+            if (tabId === "requests") { renderMyIssueRequests(); renderUserWaitlists(); }
+            if (tabId === "issued") renderIssued();
+            if (tabId === "fines") renderFines();
+        }
+
+        async function loadDashboardData() {
+            try {
+                const loans = await LibraryAPI.getLoans(currentUser.userId);
+                const requests = await LibraryAPI.getMyRequests(currentUser.userId);
+                const waitlists = await LibraryAPI.getMyWaitlist(currentUser.userId);
+
+                const activeLoansCount = loans.filter(l => l.status === "issued" || l.status === "overdue" || l.status === "Issued" || l.status === "Overdue").length;
+                const pendingReqsCount = requests.filter(r => r.status === "PENDING").length;
+                const activeWaitlistsCount = waitlists.filter(w => w.status === "WAITING" || w.status === "NOTIFIED").length;
+
+                document.getElementById("statActiveLoans").textContent = activeLoansCount;
+                document.getElementById("statPendingReqs").textContent = pendingReqsCount;
+                document.getElementById("statWaitlist").textContent = activeWaitlistsCount;
+                
+                const totalFine = loans.reduce((acc, l) => acc + (parseFloat(l.fine_amount) || 0), 0);
+                document.getElementById("statFine").textContent = `₹${totalFine.toFixed(2)}`;
+                if (document.getElementById("fineTabTotal")) {
+                    document.getElementById("fineTabTotal").textContent = `₹${totalFine.toFixed(2)}`;
+                }
+
+                renderFeaturedBooks();
+            } catch (e) {
+                console.error("Dashboard data load error:", e);
+            }
+        }
+
+        async function requestBookIssue(bookId) {
+            try {
+                const res = await LibraryAPI.issueBook(currentUser.userId, bookId);
+                showToast(res.message, res.success ? "success" : "error");
+                await renderOPAC();
+                await renderFeaturedBooks();
+                await loadDashboardData();
+                if (res.success) {
+                    switchTab('requests');
+                }
+            } catch (e) {
+                showToast("Unable to submit issue request.", "error");
+            }
+        }
+
+        async function handleJoinWaitlist(bookId) {
+            try {
+                const res = await LibraryAPI.joinWaitlist(currentUser.userId, bookId);
+                showToast(res.message, res.success ? "success" : "error");
+                await renderOPAC();
+                await renderFeaturedBooks();
+                await loadDashboardData();
+            } catch (e) {
+                showToast("Unable to join waitlist.", "error");
+            }
+        }
+
+        async function renderFeaturedBooks() {
+            const container = document.getElementById("overviewBooksContainer");
+            if (!container) return;
+            try {
+                const books = await LibraryAPI.getBooks();
+                const featured = books.slice(0, 3);
+                const myWaitlists = await LibraryAPI.getMyWaitlist(currentUser.userId);
+                
+                if (featured.length === 0) {
+                    container.innerHTML = `<p class="col-span-full text-xs text-textMuted italic text-center py-6">No featured textbooks available.</p>`;
+                    return;
+                }
+
+                container.innerHTML = featured.map((b) => {
+                    const waitEntry = myWaitlists.find(w => (w.book_id === b.book_id || w.book_id === b.id) && (w.status === 'WAITING' || w.status === 'NOTIFIED'));
+                    const isWaiting = !!waitEntry;
+                    const isNotified = waitEntry && waitEntry.status === 'NOTIFIED';
+
+                    return `
+                    <div class="ui-card p-4 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="chip chip-info">${b.department}</span>
+                                <span class="text-[10px] font-mono text-textMuted">ID: ${b.book_id || b.id}</span>
+                            </div>
+                            <h4 class="font-semibold text-sm text-textMain mt-2 leading-snug">${b.title}</h4>
+                            <p class="text-xs text-textMuted mt-1">Author: ${b.author}</p>
+                            <p class="text-xs text-textMuted font-mono">ISBN: ${b.isbn || '-'}</p>
+                        </div>
+                        <div class="pt-3 border-t border-border flex items-center justify-between text-xs">
+                            <span class="font-medium ${b.available_copies > 0 || isNotified ? 'text-success' : 'text-danger'}">${b.available_copies > 0 ? `Available (${b.available_copies})` : (isNotified ? 'Reserved!' : isWaiting ? 'In Waitlist' : 'Out of Stock')}</span>
+                            ${isNotified 
+                                ? `<button onclick="requestBookIssue('${b.book_id || b.id}')" class="btn-primary text-xs h-7 px-2">Request Reserved</button>`
+                                : b.available_copies > 0 
+                                ? `<button onclick="requestBookIssue('${b.book_id || b.id}')" class="btn-primary text-xs h-7 px-2"><span class="material-symbols-outlined text-[14px]">send</span>Request</button>`
+                                : `<button onclick="handleJoinWaitlist('${b.book_id || b.id}')" class="btn-secondary text-xs h-7 px-2">${isWaiting ? `Pos #${waitEntry.position}` : 'Join Waitlist'}</button>`
+                            }
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (e) {
+                container.innerHTML = `<p class="col-span-full text-xs text-danger italic text-center py-6">Failed to load textbooks.</p>`;
+            }
+        }
+
+        let trieDebounceTimer = null;
+
+        async function handleTrieSearchInput(val) {
+            clearTimeout(trieDebounceTimer);
+            const dropdown = document.getElementById("trieSuggestDropdown");
+            const perfPill = document.getElementById("triePerfPill");
+
+            if (!val || val.trim().length === 0) {
+                if (dropdown) dropdown.classList.add("hidden");
+                if (perfPill) perfPill.classList.add("hidden");
+                renderOPAC();
+                return;
+            }
+
+            trieDebounceTimer = setTimeout(async () => {
+                const res = await LibraryAPI.suggestBooks(val, 5);
+                if (res.success && res.suggestions && res.suggestions.length > 0 && dropdown) {
+                    dropdown.innerHTML = res.suggestions.map(s => `
+                        <div onclick="selectTrieSuggestion('${s.title.replace(/'/g, "\\'")}')" class="p-3 hover:bg-surface-low cursor-pointer flex items-center justify-between transition">
+                            <div>
+                                <p class="font-medium text-textMain">${s.title}</p>
+                                <p class="text-[10px] text-textMuted">${s.author} · ${s.category || 'Engineering'}</p>
+                            </div>
+                            <span class="text-[10px] font-mono text-textMuted">ID: ${s.book_id}</span>
+                        </div>
+                    `).join('');
+                    dropdown.classList.remove("hidden");
+                } else if (dropdown) {
+                    dropdown.classList.add("hidden");
+                }
+
+                try {
+                    const metaRes = await LibraryAPI.request('books/detailed', { search: val, department: document.getElementById("opacDeptFilter")?.value || 'all' });
+                    if (metaRes.success && metaRes.meta && perfPill) {
+                        perfPill.classList.remove("hidden");
+                        document.getElementById("triePerfStruct").textContent = `Structure: ${metaRes.meta.structure || 'Trie'}`;
+                        document.getElementById("triePerfTime").textContent = `Latency: ${metaRes.meta.timeMicros || 0} µs`;
+                        document.getElementById("triePerfScanned").textContent = `Scanned: ${metaRes.meta.candidatesScanned || 0}`;
+                    }
+                } catch (e) {}
+                renderOPAC();
+            }, 150);
+        }
+
+        function selectTrieSuggestion(title) {
+            document.getElementById("opacSearchInput").value = title;
+            const dropdown = document.getElementById("trieSuggestDropdown");
+            if (dropdown) dropdown.classList.add("hidden");
+            renderOPAC();
+        }
+
+        async function renderOPAC() {
+            const grid = document.getElementById("opacGrid");
+            if (!grid) return;
+            const search = document.getElementById("opacSearchInput").value;
+            const dept = document.getElementById("opacDeptFilter").value;
+
+            grid.innerHTML = `
+                <div class="ui-card p-4 space-y-2"><div class="h-4 w-20 skeleton rounded"></div><div class="h-5 w-3/4 skeleton rounded"></div><div class="h-4 w-1/2 skeleton rounded"></div></div>
+                <div class="ui-card p-4 space-y-2"><div class="h-4 w-20 skeleton rounded"></div><div class="h-5 w-3/4 skeleton rounded"></div><div class="h-4 w-1/2 skeleton rounded"></div></div>
+            `;
+
+            try {
+                const books = await LibraryAPI.getBooks(search, dept);
+                if (books.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-12 ui-card space-y-2">
+                            <span class="material-symbols-outlined text-[36px] text-textMuted">search_off</span>
+                            <p class="text-sm font-medium text-textMain">No matching books found</p>
+                            <p class="text-xs text-textMuted">Try searching with a different title, author name, ISBN, or Book ID.</p>
+                        </div>`;
+                    return;
+                }
+
+                const myWaitlists = await LibraryAPI.getMyWaitlist(currentUser.userId);
+                grid.innerHTML = books.map((b) => {
+                    const waitEntry = myWaitlists.find(w => (w.book_id === b.book_id || w.book_id === b.id) && (w.status === 'WAITING' || w.status === 'NOTIFIED'));
+                    const isWaiting = !!waitEntry;
+                    const isNotified = waitEntry && waitEntry.status === 'NOTIFIED';
+
+                    return `
+                    <div class="ui-card p-5 flex flex-col justify-between space-y-4">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="chip chip-info">${b.category || b.department}</span>
+                                <span class="text-[10px] font-mono text-textMuted">ID: ${b.book_id || b.id}</span>
+                            </div>
+                            <h3 class="font-semibold text-base text-textMain leading-snug">${b.title}</h3>
+                            <p class="text-xs text-textMuted">Author: ${b.author}</p>
+                            <div class="p-2 rounded bg-surface-low border border-border text-[11px] font-mono text-textMuted">
+                                ISBN: ${b.isbn || '-'}
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-border flex items-center justify-between">
+                            <div>
+                                <p class="text-[10px] font-medium text-textMuted">Stock Status</p>
+                                <p class="text-xs font-semibold ${b.available_copies > 0 || isNotified ? 'text-success' : 'text-danger'}">
+                                    ${b.available_copies > 0 ? `Available (${b.available_copies})` : (isNotified ? 'Reserved!' : isWaiting ? 'In Waitlist' : 'Out of Stock')}
+                                </p>
+                            </div>
+                            ${isNotified 
+                                ? `<button onclick="requestBookIssue('${b.book_id || b.id}')" class="btn-primary text-xs h-8"><span class="material-symbols-outlined text-[16px]">send</span>Request Reserved</button>`
+                                : b.available_copies > 0 
+                                ? `<button onclick="requestBookIssue('${b.book_id || b.id}')" class="btn-primary text-xs h-8"><span class="material-symbols-outlined text-[16px]">send</span>Request Book</button>`
+                                : `<button onclick="handleJoinWaitlist('${b.book_id || b.id}')" class="btn-secondary text-xs h-8">${isWaiting ? `Pos #${waitEntry.position}` : 'Join Waitlist'}</button>`
+                            }
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (e) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-danger font-medium">Unable to load library catalogue.</div>`;
+            }
+        }
+
+        async function renderMyIssueRequests() {
+            const container = document.getElementById("userIssueRequestsList");
+            if (!container) return;
+            try {
+                const requests = await LibraryAPI.getMyRequests(currentUser.userId);
+                if (requests.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-6 text-center bg-surface-low border border-border rounded-lg space-y-1">
+                            <span class="material-symbols-outlined text-[32px] text-textMuted">inbox</span>
+                            <p class="text-xs font-medium text-textMain">No submitted requests</p>
+                            <p class="text-[11px] text-textMuted">Explore the catalogue to request textbooks from the library desk.</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = requests.slice().reverse().map(r => {
+                    const statusChip = r.status === "APPROVED" ? "chip-success" :
+                        r.status === "REJECTED" ? "chip-danger" : "chip-warning";
+                    return `
+                    <div class="p-3 bg-surface-low border border-border rounded-lg flex items-center justify-between gap-3 text-xs">
+                        <div>
+                            <p class="font-semibold text-textMain">${r.book_title}</p>
+                            <p class="text-[11px] text-textMuted mt-0.5">Request #${r.id} · Date: ${r.requested_at ? r.requested_at.substring(0,10) : "Recently"}</p>
+                            ${r.reason ? `<p class="text-[11px] text-danger mt-0.5">Reason: ${r.reason}</p>` : ""}
+                        </div>
+                        <span class="chip ${statusChip}">${r.status}</span>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = `<p class="text-xs text-textMuted italic">Unable to load requests.</p>`;
+            }
+        }
+
+        async function renderUserWaitlists() {
+            const container = document.getElementById("userWaitlistStatusList");
+            if (!container) return;
+            try {
+                const userLists = await LibraryAPI.getMyWaitlist(currentUser.userId);
+                if (userLists.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-6 text-center bg-surface-low border border-border rounded-lg space-y-1">
+                            <p class="text-xs font-medium text-textMain">No active waitlists</p>
+                            <p class="text-[11px] text-textMuted">You are currently not queued for any out-of-stock titles.</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = userLists.map(w => {
+                    const isNotified = w.status === "NOTIFIED";
+                    const isWaiting = w.status === "WAITING";
+                    const chipClass = isNotified ? "chip-success" : w.status === "FULFILLED" ? "chip-info" : w.status === "CANCELLED" ? "chip-neutral" : "chip-warning";
+                    
+                    return `
+                    <div class="p-3 bg-surface-low border border-border rounded-lg space-y-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-textMain">${w.book_title}</p>
+                                <p class="text-[10px] text-textMuted">Joined: ${w.joined_at ? w.joined_at.substring(0,10) : 'Recently'}</p>
+                            </div>
+                            <span class="chip ${chipClass}">
+                                ${isNotified ? 'RESERVED' : `${w.status} (Pos #${w.position})`}
+                            </span>
+                        </div>
+                        ${isNotified ? `
+                            <div class="p-2 bg-success-bg border border-success rounded flex items-center justify-between text-[11px]">
+                                <span class="text-success font-medium">Book available! Submit request within 24h.</span>
+                                <button onclick="requestBookIssue('${w.book_id}')" class="btn-primary text-xs h-6 px-2">Request</button>
+                            </div>
+                        ` : ''}
+                        ${isWaiting || isNotified ? `
+                            <div class="flex justify-end pt-1">
+                                <button onclick="promptLeaveWaitlist(${w.id}, '${(w.book_title || '').replace(/'/g, "\\'")}')" class="btn-ghost text-xs text-danger h-6 px-2">
+                                    <span class="material-symbols-outlined text-[14px]">output</span> Leave Waitlist
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `}).join('');
+            } catch(e) {
+                container.innerHTML = `<p class="text-xs text-textMuted italic">Unable to load waitlists.</p>`;
+            }
+        }
+
+        function promptLeaveWaitlist(id, title) {
+            activeLeaveWaitlistId = id;
+            document.getElementById("leaveWaitlistBookTitle").textContent = title;
+            document.getElementById("leaveWaitlistModal").classList.remove("hidden");
+            document.getElementById("confirmLeaveWaitlistBtn").onclick = handleUserLeaveWaitlist;
+        }
+
+        function closeLeaveWaitlistModal() {
+            document.getElementById("leaveWaitlistModal").classList.add("hidden");
+            activeLeaveWaitlistId = null;
+        }
+
+        async function handleUserLeaveWaitlist() {
+            if (!activeLeaveWaitlistId) return;
+            const wId = activeLeaveWaitlistId;
+            closeLeaveWaitlistModal();
+            try {
+                const res = await LibraryAPI.leaveWaitlist(wId, currentUser.userId);
+                showToast(res.message, res.success ? "success" : "error");
+                await renderUserWaitlists();
+                await renderOPAC();
+                await loadDashboardData();
+            } catch (e) {
+                showToast("Failed to leave waitlist.", "error");
+            }
+        }
+
+        async function renderIssued() {
+            const tbody = document.getElementById("issuedTableBody");
+            if (!tbody) return;
+            try {
+                const loans = await LibraryAPI.getLoans(currentUser.userId);
+                const activeLoans = loans.filter(l => {
+                    const st = (l.status || '').toLowerCase();
+                    return st === "issued" || st === "overdue" || st === "return_requested";
+                });
+
+                if (activeLoans.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-10 bg-white">
+                                <div class="max-w-xs mx-auto space-y-1">
+                                    <span class="material-symbols-outlined text-[36px] text-textMuted">auto_stories</span>
+                                    <p class="text-sm font-semibold text-textMain">No active issued books</p>
+                                    <p class="text-xs text-textMuted">Explore the catalogue to request textbooks for your courses.</p>
+                                </div>
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = activeLoans.map(l => {
+                    const isPendingApproval = (l.status || '').toLowerCase() === 'return_requested';
+                    const isOverdue = (l.status || '').toLowerCase() === 'overdue';
+                    const chipClass = isPendingApproval ? 'chip-warning' : isOverdue ? 'chip-danger' : 'chip-success';
+                    const statusText = isPendingApproval ? 'RETURN REQUESTED' : l.status.toUpperCase();
+
+                    return `
+                    <tr>
+                        <td>
+                            <p class="font-semibold text-textMain">${l.book_title || 'Engineering Textbook'}</p>
+                            <p class="text-xs text-textMuted">${l.book_author || 'Author'}</p>
+                        </td>
+                        <td class="text-textMuted">${l.issue_date}</td>
+                        <td class="font-semibold text-primary">${l.due_date}</td>
+                        <td>
+                            <span class="chip ${chipClass}">${statusText}</span>
+                        </td>
+                        <td class="text-right">
+                            ${isPendingApproval 
+                                ? `<button disabled class="btn-secondary text-xs h-7 opacity-50 cursor-not-allowed">Awaiting Approval</button>`
+                                : `<button onclick="promptReturnBook(${l.id})" class="btn-primary text-xs h-7">Return Book</button>`
+                            }
+                        </td>
+                    </tr>
+                `}).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-danger font-medium">Unable to load active loans.</td></tr>`;
+            }
+        }
+
+        async function promptReturnBook(loanId) {
+            activeReturnLoanId = loanId;
+            try {
+                const loans = await LibraryAPI.getLoans(currentUser.userId);
+                const loan = loans.find(l => l.id == loanId);
+                if (loan) {
+                    document.getElementById("returnBookTitle").textContent = loan.book_title || "Engineering Textbook";
+                    document.getElementById("returnDueDate").textContent = loan.due_date || "-";
+                    document.getElementById("returnStatus").textContent = (loan.status || "issued").toUpperCase();
+                    const fine = parseFloat(loan.fine_amount || 0);
+                    const fineEl = document.getElementById("returnFineInfo");
+                    if (fine > 0) {
+                        fineEl.innerHTML = `Overdue Fine Accrued: ₹${fine.toFixed(2)}`;
+                        fineEl.classList.remove("hidden");
+                    } else {
+                        fineEl.classList.add("hidden");
+                    }
+                }
+            } catch(e) {}
+            document.getElementById("returnConfirmModal").classList.remove("hidden");
+            document.getElementById("confirmReturnActionBtn").onclick = handleUserSelfReturn;
+        }
+
+        function closeReturnConfirmModal() {
+            document.getElementById("returnConfirmModal").classList.add("hidden");
+            activeReturnLoanId = null;
+        }
+
+        async function handleUserSelfReturn() {
+            if (!activeReturnLoanId) return;
+            const loanId = activeReturnLoanId;
+            closeReturnConfirmModal();
+            try {
+                const res = await LibraryAPI.returnBook(loanId, currentUser.userId);
+                showToast(res.message, res.success ? "success" : "error");
+                await renderIssued();
+                await renderFines();
+                await loadDashboardData();
+            } catch (e) {
+                showToast("Failed to process book return.", "error");
+            }
+        }
+
+        async function renderFines() {
+            const tbody = document.getElementById("finesTableBody");
+            if (!tbody) return;
+            try {
+                const storedFines = await LibraryAPI.getMyFines(currentUser.userId);
+                const loans = await LibraryAPI.getLoans(currentUser.userId);
+
+                let totalDue = 0;
+                let rows = [];
+
+                for (let l of loans) {
+                    if (l.status.toLowerCase() === "overdue" && l.fine_amount > 0) {
+                        totalDue += parseFloat(l.fine_amount || 0);
+                        rows.push(`
+                            <tr>
+                                <td class="font-semibold text-textMain">${l.book_title || 'Engineering Textbook'}</td>
+                                <td class="text-textMuted">${l.due_date}</td>
+                                <td class="text-textMuted">₹6.00 / day</td>
+                                <td><span class="chip chip-danger">OVERDUE</span></td>
+                                <td class="text-right font-semibold text-danger">₹${parseFloat(l.fine_amount || 0).toFixed(2)}</td>
+                            </tr>
+                        `);
+                    }
+                }
+
+                for (let f of storedFines) {
+                    totalDue += parseFloat(f.remaining_amount || 0);
+                    const chipClass = f.status === 'PAID' ? 'chip-success' : f.status === 'PARTIALLY_PAID' ? 'chip-warning' : 'chip-danger';
+                    rows.push(`
+                        <tr>
+                            <td class="font-semibold text-textMain">${f.book_title || 'Engineering Textbook'}</td>
+                            <td class="text-textMuted">${f.due_date}</td>
+                            <td class="text-textMuted">₹6.00 / day (${f.overdue_days} days)</td>
+                            <td><span class="chip ${chipClass}">${f.status}</span></td>
+                            <td class="text-right font-semibold text-danger">₹${parseFloat(f.remaining_amount || 0).toFixed(2)}</td>
+                        </tr>
+                    `);
+                }
+
+                document.getElementById("fineTabTotal").textContent = `₹${totalDue.toFixed(2)}`;
+
+                if (rows.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-success font-medium bg-success-bg rounded-lg">
+                                <span class="material-symbols-outlined text-[24px] block mx-auto mb-1">verified</span>
+                                You have zero overdue fine penalties.
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = rows.join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-danger font-medium">Unable to load fines.</td></tr>`;
+            }
+        }
+
+        function showProfileModal() {
+            if (!currentUser) return;
+            document.getElementById("profileName").textContent = currentUser.name || "Student User";
+            document.getElementById("profileEmail").textContent = currentUser.userId || currentUser.email || "student@mmcoe.edu.in";
+            document.getElementById("profileAvatar").textContent = (currentUser.name || "U")[0].toUpperCase();
+            document.getElementById("profileDept").textContent = currentUser.department || "Computer Engineering";
+            document.getElementById("profileRoleTag").textContent = (currentUser.role || "STUDENT").toUpperCase();
+            document.getElementById("profileModal").classList.remove("hidden");
+        }
+
+        function closeProfileModal() {
+            document.getElementById("profileModal").classList.add("hidden");
+        }
+
+        function logout() {
+            sessionStorage.removeItem("currentUser");
+            window.location.href = "login.html";
+        }
+    </script>
+</body>
+</html>

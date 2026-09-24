@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMCOE Library - Librarian Portal</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="js/api.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6d0000",
+                        primaryDark: "#4A0000",
+                        primaryLight: "#980000",
+                        crimson: "#C41E3A",
+                        background: "#fffaf9",
+                        surface: "#ffffff",
+                        surfaceLow: "#fff1ef",
+                        textMain: "#1f1412",
+                        textMuted: "#6e5551",
+                        border: "#ebd6d2",
+                        borderDark: "#d5afaa"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .toast-enter {
+            animation: slideInDown 0.3s ease-out;
+        }
+        @keyframes slideInDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-background antialiased flex flex-col lg:flex-row relative">
+
+    <!-- Toast Notification -->
+    <div id="adminToast" class="hidden fixed top-4 right-4 z-50 bg-primary text-white px-4 py-3 rounded-lg shadow-md border border-primaryLight flex items-center gap-2.5 text-xs font-medium toast-enter">
+        <span class="material-symbols-outlined text-[18px]">verified</span>
+        <p id="adminToastMsg">Transaction processed successfully!</p>
+    </div>
+
+    <!-- Desktop Sidebar (240px) -->
+    <aside id="appSidebar" class="hidden lg:flex flex-col w-60 bg-surface border-r border-border fixed top-0 bottom-0 left-0 z-30">
+        <!-- Sidebar Brand -->
+        <div class="h-14 px-5 border-b border-border flex items-center gap-3">
+            <img src="logo.jpg" alt="MMCOE Logo" class="w-8 h-8 object-contain">
+            <div>
+                <h1 class="text-sm font-bold text-primary leading-none">MMCOE Library</h1>
+                <p class="text-[10px] text-textMuted uppercase tracking-wider mt-0.5">Librarian Desk</p>
+            </div>
+        </div>
+
+        <!-- Sidebar Navigation Links -->
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn nav-item active w-full">
+                <span class="material-symbols-outlined text-[20px]">query_stats</span>
+                <span>Analytics</span>
+            </button>
+            <button onclick="switchTab('circulation')" id="tab-circulation" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">sync_alt</span>
+                <span>Circulation Desk</span>
+            </button>
+            <button onclick="switchTab('fines')" id="tab-fines" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">payments</span>
+                <span>Fine Settlement</span>
+            </button>
+            <button onclick="switchTab('waitlist')" id="tab-waitlist" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">queue</span>
+                <span>Waitlists</span>
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">library_books</span>
+                <span>Book Inventory</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar User Footer -->
+        <div class="p-3 border-t border-border space-y-2">
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surfaceLow transition">
+                <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-xs shrink-0" id="adminAvatar">
+                    A
+                </div>
+                <div class="truncate text-left">
+                    <p class="text-xs font-semibold text-textMain truncate" id="adminName">Administrator</p>
+                    <p class="text-[10px] text-textMuted uppercase truncate" id="adminRole">LIBRARIAN</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="btn-ghost w-full justify-start text-xs text-textMuted hover:text-danger">
+                <span class="material-symbols-outlined text-[18px]">logout</span>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Workspace Wrapper -->
+    <div class="flex-1 lg:ml-60 flex flex-col min-w-0">
+
+        <!-- Slim Top Bar (56px) -->
+        <header class="h-14 bg-surface border-b border-border sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-textMain">Librarian Control Panel</h2>
+
+            <div class="flex items-center gap-3">
+                <!-- Notifications Popover -->
+                <div class="relative">
+                    <button onclick="toggleNotificationPanel()" class="btn-ghost w-9 h-9 p-0 rounded-full relative text-textMuted hover:text-primary">
+                        <span class="material-symbols-outlined text-[20px]">notifications</span>
+                        <span id="unreadNotifBadge" class="hidden absolute top-1 right-1 bg-crimson text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    </button>
+
+                    <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 ui-card p-4 space-y-3 z-50">
+                        <div class="flex items-center justify-between border-b border-border pb-2">
+                            <h4 class="font-semibold text-xs text-textMain flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px] text-primary">notifications</span>
+                                System Alerts
+                            </h4>
+                            <button onclick="handleMarkAllNotificationsRead()" class="btn-ghost text-[11px] h-6 px-2">Mark all read</button>
+                        </div>
+                        <div id="notificationList" class="max-h-72 overflow-y-auto space-y-2 text-xs">
+                            <p class="text-textMuted text-center py-4 italic text-xs">Loading alerts...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8">
+
+            <!-- TAB 1: SYSTEM ANALYTICS -->
+            <div id="view-analytics" class="space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div onclick="switchTab('inventory')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Total Book Titles</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statTitles">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Manage inventory <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('inventory')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Total Copy Stock</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statCopies">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">View rack stock <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('circulation')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Active Borrowings</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statActive">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">View active loans <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('fines')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Total Overdue Fines</p>
+                        <p class="text-2xl font-semibold text-danger tracking-tight" id="statOverdue">₹0.00</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Fine details <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+                </div>
+
+                <div class="ui-card p-6 space-y-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-textMain">Active Borrowings & System Log</h3>
+                        <p class="text-xs text-textMuted mt-0.5">Live active loans and status monitoring</p>
+                    </div>
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Borrower Email</th>
+                                    <th>Book Title</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Loan Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analyticsLoansTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: CIRCULATION DESK -->
+            <div id="view-circulation" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Pending Return Requests -->
+                    <div class="lg:col-span-12 ui-card p-6 space-y-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">assignment_return</span>
+                                Pending Book Returns (Verification)
+                            </h2>
+                            <p class="text-xs text-textMuted mt-0.5">Verify physical book condition and approve student return requests</p>
+                        </div>
+                        <div id="pendingReturnsList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Pending Issue Requests -->
+                    <div class="lg:col-span-7 ui-card p-6 space-y-4">
+                        <div>
+                            <h2 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">pending_actions</span>
+                                Pending Book Issue Requests
+                            </h2>
+                            <p class="text-xs text-textMuted mt-0.5">Review student & faculty borrowing requests for approval</p>
+                        </div>
+                        <div id="pendingRequestsList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Active Loans Monitor -->
+                    <div class="lg:col-span-5 ui-card p-6 space-y-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">history_edu</span>
+                                Active Loans Monitor
+                            </h3>
+                            <p class="text-xs text-textMuted mt-0.5">Monitor currently issued books and loan statuses</p>
+                        </div>
+                        <div id="returnList" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: FINE SETTLEMENT DESK -->
+            <div id="view-fines" class="space-y-6 hidden">
+                <!-- Min-Heap Priority Queue Card -->
+                <div class="ui-card p-6 space-y-4 bg-surface-low border-border">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-primary flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px]">priority_high</span>
+                                Min-Heap Urgent Overdue Priority Queue
+                            </h3>
+                            <p class="text-xs text-textMuted mt-0.5">Top-priority urgent overdue records sorted by earliest due date via Binary Min-Heap (O(1) Peek).</p>
+                        </div>
+                        <button onclick="loadUrgentOverdueHeap()" class="btn-secondary text-xs">
+                            <span class="material-symbols-outlined text-[16px]">refresh</span> Refresh Heap
+                        </button>
+                    </div>
+                    <div id="urgentHeapList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                </div>
+
+                <div class="ui-card p-6 space-y-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-textMain">Fine Settlement Desk</h2>
+                        <p class="text-xs text-textMuted mt-0.5">View overdue fine penalties, record payments, and issue clearances</p>
+                    </div>
+
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Borrower</th>
+                                    <th>Book Title</th>
+                                    <th>Due Date</th>
+                                    <th>Overdue Days</th>
+                                    <th>Total Fine</th>
+                                    <th>Paid</th>
+                                    <th>Remaining</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: WAITLISTS -->
+            <div id="view-waitlist" class="space-y-4 hidden">
+                <div class="ui-card p-6 space-y-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-textMain">Global Book Waitlists</h2>
+                        <p class="text-xs text-textMuted mt-0.5">First-Come, First-Served waitlist queues for out-of-stock textbooks</p>
+                    </div>
+
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Book Title & ID</th>
+                                    <th>Queued Borrower</th>
+                                    <th>Position</th>
+                                    <th>Joined Date</th>
+                                    <th>Queue Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="waitlistTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: INVENTORY -->
+            <div id="view-inventory" class="space-y-4 hidden">
+                <div class="ui-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-textMain">Book Catalog & Physical Stock</h2>
+                        <p class="text-xs text-textMuted mt-0.5">Manage catalogue textbooks, ISBN records, and total copy stock</p>
+                    </div>
+                    <button onclick="toggleAddBookModal()" class="btn-primary">
+                        <span class="material-symbols-outlined text-[18px]">add</span>
+                        <span>Add New Book</span>
+                    </button>
+                </div>
+
+                <div class="ui-card p-4 space-y-4">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-textMuted text-[18px]">search</span>
+                        <input type="text" id="inventorySearchInput" oninput="renderInventory()" placeholder="Filter inventory by title, author, ISBN, or Book ID..." class="ui-input pl-10">
+                    </div>
+
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Book Title & ID</th>
+                                    <th>Author</th>
+                                    <th>ISBN</th>
+                                    <th>Category</th>
+                                    <th class="text-center">Total Copies</th>
+                                    <th class="text-center">Available</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation (<1024px) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface border-t border-border grid grid-cols-5 z-40">
+        <button onclick="switchTab('analytics')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-analytics">
+            <span class="material-symbols-outlined text-[20px]">query_stats</span>
+            <span class="text-[10px] font-medium">Stats</span>
+        </button>
+        <button onclick="switchTab('circulation')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-circulation">
+            <span class="material-symbols-outlined text-[20px]">sync_alt</span>
+            <span class="text-[10px] font-medium">Desk</span>
+        </button>
+        <button onclick="switchTab('fines')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-fines">
+            <span class="material-symbols-outlined text-[20px]">payments</span>
+            <span class="text-[10px] font-medium">Fines</span>
+        </button>
+        <button onclick="switchTab('waitlist')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-waitlist">
+            <span class="material-symbols-outlined text-[20px]">queue</span>
+            <span class="text-[10px] font-medium">Queue</span>
+        </button>
+        <button onclick="switchTab('inventory')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-inventory">
+            <span class="material-symbols-outlined text-[20px]">library_books</span>
+            <span class="text-[10px] font-medium">Books</span>
+        </button>
+    </nav>
+
+    <!-- Reject Reason Modal -->
+    <div id="rejectReasonModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-sm p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-2">
+                <h3 class="font-semibold text-sm text-textMain flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[18px] text-danger">cancel</span> Reject Issue Request
+                </h3>
+                <button onclick="closeRejectModal()" class="btn-ghost h-6 w-6 p-0 rounded-full"><span class="material-symbols-outlined text-[16px]">close</span></button>
+            </div>
+            <p class="text-xs text-textMuted">Provide reason for rejecting request #<strong id="rejectReqIdDisplay">1</strong>:</p>
+            <textarea id="rejectReasonInput" rows="3" placeholder="e.g. Reserved for course lab reference or limit reached." class="ui-input h-auto py-2 font-medium"></textarea>
+            <div class="flex gap-2">
+                <button onclick="closeRejectModal()" class="btn-secondary flex-1">Cancel</button>
+                <button onclick="submitRejectReason()" class="btn-danger flex-1">Confirm Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settle Fine Modal -->
+    <div id="settleFineModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-md p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3">
+                <h3 class="font-semibold text-base text-textMain">Record Fine Settlement</h3>
+                <button onclick="toggleSettleFineModal()" class="btn-ghost h-7 w-7 p-0 rounded-full"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <form onsubmit="handleSettleFineSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="settleFineId">
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Borrower Email</label>
+                    <input type="text" id="settleStudent" readonly class="ui-input bg-surface-low font-semibold text-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Book Title</label>
+                    <input type="text" id="settleBook" readonly class="ui-input bg-surface-low font-semibold">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Remaining Due (₹)</label>
+                        <input type="text" id="settleRemaining" readonly class="ui-input bg-danger-bg text-danger font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Amount Paid (₹) *</label>
+                        <input type="number" step="0.01" id="settleAmount" required class="ui-input text-success font-semibold">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Payment Method *</label>
+                    <select id="settleMethod" class="ui-input bg-white">
+                        <option value="CASH">CASH</option>
+                        <option value="UPI">UPI / Online Transfer</option>
+                        <option value="CARD">Debit / Credit Card</option>
+                        <option value="OTHER">OTHER</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Payment Reference / Txn ID</label>
+                    <input type="text" id="settleRef" placeholder="e.g. REC-2026-0912" class="ui-input">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-2">Record Payment & Settle Dues</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Book Modal -->
+    <div id="addBookModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-md p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3">
+                <h3 class="font-semibold text-base text-textMain">Add New Book to Catalogue</h3>
+                <button onclick="toggleAddBookModal()" class="btn-ghost h-7 w-7 p-0 rounded-full"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <form onsubmit="handleAddBook(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Book Title *</label>
+                    <input type="text" id="addTitle" required placeholder="e.g. Principles of Database Systems" class="ui-input">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Author Name *</label>
+                    <input type="text" id="addAuthor" required placeholder="e.g. Ramez Elmasri" class="ui-input">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">ISBN Number *</label>
+                    <input type="text" id="addIsbn" required placeholder="e.g. 9780133970777" class="ui-input font-mono">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Department</label>
+                        <select id="addDept" class="ui-input bg-white">
+                            <option value="Computer Engineering">Computer Engineering</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="AI & Data Science">AI & Data Science</option>
+                            <option value="E&TC Engineering">E&TC Engineering</option>
+                            <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Initial Copies *</label>
+                        <input type="number" id="addCopies" min="1" value="5" required class="ui-input font-semibold">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-full mt-2">Add Book to Inventory</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Book Modal -->
+    <div id="editBookModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-md p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3">
+                <h3 class="font-semibold text-base text-textMain">Edit Book Details</h3>
+                <button onclick="toggleEditBookModal()" class="btn-ghost h-7 w-7 p-0 rounded-full"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <form onsubmit="handleEditBookSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="editBookId">
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Book ID</label>
+                    <input type="text" id="editBookIdDisplay" readonly class="ui-input bg-surface-low font-mono font-semibold text-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Book Title *</label>
+                    <input type="text" id="editTitle" required class="ui-input">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Author Name *</label>
+                    <input type="text" id="editAuthor" required class="ui-input">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">ISBN Number *</label>
+                    <input type="text" id="editIsbn" required class="ui-input font-mono">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Category</label>
+                        <input type="text" id="editCategory" class="ui-input">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Department</label>
+                        <select id="editDept" class="ui-input bg-white">
+                            <option value="Computer Engineering">Computer Engineering</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="AI & Data Science">AI & Data Science</option>
+                            <option value="E&TC Engineering">E&TC Engineering</option>
+                            <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Total Copies Stock *</label>
+                    <input type="number" id="editCopies" min="1" required class="ui-input font-semibold">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-2">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Book Modal -->
+    <div id="deleteBookModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-sm p-6 space-y-4 text-center">
+            <span class="material-symbols-outlined text-[32px] text-danger">delete_forever</span>
+            <h3 class="font-semibold text-base text-textMain">Delete Book</h3>
+            <p class="text-xs text-textMuted">Are you sure you want to delete <strong id="deleteBookTitle">this book</strong> (<span id="deleteBookIdDisplay" class="font-mono text-primary font-bold">ID</span>) from catalogue?</p>
+            <div class="flex gap-2">
+                <button onclick="toggleDeleteBookModal()" class="btn-secondary flex-1">Cancel</button>
+                <button onclick="executeBookDeletion()" class="btn-danger flex-1">Confirm Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Printable Receipt Modal -->
+    <div id="receiptModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-lg p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3">
+                <div class="flex items-center gap-3">
+                    <img src="logo.jpg" alt="MMCOE Logo" class="w-8 h-8 object-contain">
+                    <div>
+                        <h3 class="font-bold text-base text-primary">MMCOE Library Receipt</h3>
+                        <p class="text-[10px] text-textMuted font-mono" id="rcptId">REC-000000</p>
+                    </div>
+                </div>
+                <button onclick="toggleReceiptModal()" class="btn-ghost h-7 w-7 p-0 rounded-full"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            
+            <div id="receiptContent" class="space-y-3 text-xs font-mono bg-surface-low p-4 rounded-lg border border-border"></div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="window.print()" class="btn-primary flex-1">
+                    <span class="material-symbols-outlined text-[18px]">print</span> Print / Download Receipt
+                </button>
+                <button onclick="toggleReceiptModal()" class="btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAdmin = null;
+        let pendingRejectRequestId = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = sessionStorage.getItem("currentUser");
+            if (!userStr) {
+                window.location.href = "login.html";
+                return;
+            }
+            currentAdmin = JSON.parse(userStr);
+            if (currentAdmin.role !== "librarian") {
+                window.location.href = "dashboard.html";
+                return;
+            }
+
+            document.getElementById("adminName").textContent = currentAdmin.name || "Administrator";
+            document.getElementById("adminRole").textContent = (currentAdmin.role || "admin").toUpperCase();
+            document.getElementById("adminAvatar").textContent = (currentAdmin.name || "A")[0].toUpperCase();
+
+            loadAdminData();
+            renderCirculation();
+            loadNotifications();
+        });
+
+        function showAdminToast(msg) {
+            const toast = document.getElementById("adminToast");
+            document.getElementById("adminToastMsg").textContent = msg;
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 3000);
+        }
+
+        function toggleNotificationPanel() {
+            const panel = document.getElementById("notificationDropdown");
+            panel.classList.toggle("hidden");
+            if (!panel.classList.contains("hidden")) {
+                loadNotifications();
+            }
+        }
+
+        async function loadNotifications() {
+            if (!currentAdmin) return;
+            try {
+                const librarianId = currentAdmin.email || currentAdmin.userId || "";
+                const notifications = await LibraryAPI.getNotifications(librarianId, 'librarian');
+                const unreadCount = await LibraryAPI.getUnreadNotificationsCount(librarianId, 'librarian');
+                
+                const badge = document.getElementById("unreadNotifBadge");
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                    badge.classList.remove("hidden");
+                } else {
+                    badge.classList.add("hidden");
+                }
+
+                const container = document.getElementById("notificationList");
+                if (notifications.length === 0) {
+                    container.innerHTML = `<p class="text-textMuted text-center py-4 italic text-xs">No alerts yet.</p>`;
+                    return;
+                }
+
+                container.innerHTML = notifications.map(n => `
+                    <div class="p-3 rounded-lg border ${n.is_read ? 'bg-white border-border' : 'bg-surface-low border-border font-medium'} text-xs space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold text-primary">${n.title}</span>
+                            <span class="text-[10px] text-textMuted font-mono">${n.created_at ? n.created_at.substring(0,10) : ''}</span>
+                        </div>
+                        <p class="text-[11px] text-textMain">${n.message}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("Librarian notifications error:", e);
+            }
+        }
+
+        async function handleMarkAllNotificationsRead() {
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            await LibraryAPI.markAllNotificationsRead(librarianId, 'librarian');
+            loadNotifications();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            const btn = document.getElementById(`tab-${tabId}`);
+            if (btn) btn.classList.add("active");
+            const mobileBtn = document.getElementById(`mobile-tab-${tabId}`);
+            if (mobileBtn) mobileBtn.classList.add("active");
+
+            ["analytics", "circulation", "fines", "waitlist", "inventory", "members"].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.add("hidden");
+            });
+            const target = document.getElementById(`view-${tabId}`);
+            if (target) target.classList.remove("hidden");
+
+            if (tabId === "circulation") renderCirculation();
+            if (tabId === "fines") renderFinesDesk();
+            if (tabId === "waitlist") renderWaitlistDesk();
+            if (tabId === "inventory") renderInventory();
+        }
+
+        async function loadAdminData() {
+            const stats = await LibraryAPI.getStats();
+            document.getElementById("statTitles").textContent = stats.totalTitles;
+            document.getElementById("statCopies").textContent = stats.totalCopies;
+            document.getElementById("statActive").textContent = stats.activeLoans;
+            document.getElementById("statOverdue").textContent = `₹${(stats.totalFines || 0).toFixed(2)}`;
+
+            const loans = await LibraryAPI.getLoans();
+            document.getElementById("analyticsLoansTable").innerHTML = loans.map(l => `
+                <tr>
+                    <td class="font-mono text-xs font-medium">${l.user_id}</td>
+                    <td class="font-semibold text-textMain">${l.book_title || 'Engineering Textbook'}</td>
+                    <td class="text-textMuted">${l.issue_date}</td>
+                    <td class="text-textMuted">${l.due_date}</td>
+                    <td>
+                        <span class="chip ${l.status.toLowerCase() === 'overdue' ? 'chip-danger' : 'chip-success'}">${l.status.toUpperCase()}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function renderCirculation() {
+            const pendingReturnsContainer = document.getElementById("pendingReturnsList");
+            const pendingContainer = document.getElementById("pendingRequestsList");
+            const returnContainer = document.getElementById("returnList");
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+
+            if (pendingReturnsContainer) {
+                try {
+                    const returns = await LibraryAPI.getPendingReturns(librarianId);
+                    if (!returns || returns.length === 0) {
+                        pendingReturnsContainer.innerHTML = `<div class="p-4 text-center bg-surface-low border border-border rounded-lg text-xs text-textMuted">No pending return verification requests.</div>`;
+                    } else {
+                        pendingReturnsContainer.innerHTML = returns.map(r => `
+                            <div class="p-3 bg-warning-bg border border-warning/30 rounded-lg flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-semibold text-textMain">${r.book_title}</p>
+                                        <span class="chip chip-warning">RETURN REQUESTED</span>
+                                    </div>
+                                    <p class="text-[11px] text-textMuted font-mono mt-0.5">Borrower: ${r.user_id}</p>
+                                    <p class="text-[10px] text-textMuted mt-0.5">Loan #${r.id} · Due: ${r.due_date}</p>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="handleApproveReturn(${r.id})" class="btn-primary text-xs h-7 px-2">Approve</button>
+                                    <button onclick="handleRejectReturn(${r.id})" class="btn-danger text-xs h-7 px-2">Reject</button>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } catch (e) {
+                    pendingReturnsContainer.innerHTML = `<div class="p-3 text-xs text-danger font-medium">Unable to load pending returns.</div>`;
+                }
+            }
+
+            if (pendingContainer) {
+                try {
+                    const requests = await LibraryAPI.getPendingRequests(librarianId);
+                    if (!requests || requests.length === 0) {
+                        pendingContainer.innerHTML = `<div class="p-4 text-center bg-surface-low border border-border rounded-lg text-xs text-textMuted">No pending issue requests.</div>`;
+                    } else {
+                        pendingContainer.innerHTML = requests.map(r => `
+                            <div class="p-3 bg-surface-low border border-border rounded-lg flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                    <p class="font-semibold text-textMain">${r.book_title}</p>
+                                    <p class="text-[11px] text-textMuted font-mono mt-0.5">User: ${r.user_id}</p>
+                                    <p class="text-[10px] text-textMuted mt-0.5">Request #${r.id} · ID: ${r.book_id}</p>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="handleApproveRequest(${r.id})" class="btn-primary text-xs h-7 px-2">Approve</button>
+                                    <button onclick="openRejectModal(${r.id})" class="btn-danger text-xs h-7 px-2">Reject</button>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } catch (e) {
+                    pendingContainer.innerHTML = `<div class="p-3 text-xs text-danger font-medium">Unable to load pending requests.</div>`;
+                }
+            }
+
+            if (returnContainer) {
+                try {
+                    const loans = await LibraryAPI.getLoans();
+                    const activeLoans = loans.filter(l => l.status === 'issued' || l.status === 'overdue' || l.status === 'Issued' || l.status === 'Overdue' || l.status === 'RETURN_REQUESTED' || l.status === 'Return_Requested');
+                    if (!activeLoans || activeLoans.length === 0) {
+                        returnContainer.innerHTML = `<div class="p-4 text-center bg-surface-low border border-border rounded-lg text-xs text-textMuted">No active loans currently issued.</div>`;
+                    } else {
+                        returnContainer.innerHTML = activeLoans.map(l => {
+                            const isPending = l.status === 'RETURN_REQUESTED' || l.status === 'Return_Requested';
+                            const isOverdue = l.status.toLowerCase() === 'overdue';
+                            const chipClass = isPending ? 'chip-warning' : isOverdue ? 'chip-danger' : 'chip-success';
+                            return `
+                            <div class="p-3 bg-surface-low border border-border rounded-lg flex items-center justify-between gap-3 text-xs">
+                                <div>
+                                    <p class="font-semibold text-textMain">${l.book_title || 'Engineering Textbook'}</p>
+                                    <p class="text-[11px] text-textMuted font-mono mt-0.5">Borrower: ${l.user_id}</p>
+                                    <p class="text-[10px] text-textMuted mt-0.5">Loan #${l.id} · Due: ${l.due_date}</p>
+                                </div>
+                                <span class="chip ${chipClass}">${l.status.toUpperCase()}</span>
+                            </div>
+                        `}).join('');
+                    }
+                } catch (e) {
+                    returnContainer.innerHTML = `<div class="p-3 text-xs text-danger font-medium">Unable to load active loans.</div>`;
+                }
+            }
+        }
+
+        async function handleApproveReturn(loanId) {
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const res = await LibraryAPI.approveReturnBook(loanId, librarianId);
+            showAdminToast(res.message);
+            renderCirculation();
+            loadAdminData();
+        }
+
+        async function handleRejectReturn(loanId) {
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const res = await LibraryAPI.rejectReturnBook(loanId, librarianId, "Return rejected by librarian verification.");
+            showAdminToast(res.message);
+            renderCirculation();
+            loadAdminData();
+        }
+
+        async function handleApproveRequest(requestId) {
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const res = await LibraryAPI.approveRequest(requestId, librarianId);
+            showAdminToast(res.message);
+            renderCirculation();
+            loadAdminData();
+        }
+
+        function openRejectModal(requestId) {
+            pendingRejectRequestId = requestId;
+            document.getElementById("rejectReqIdDisplay").textContent = requestId;
+            document.getElementById("rejectReasonInput").value = "";
+            document.getElementById("rejectReasonModal").classList.remove("hidden");
+        }
+
+        function closeRejectModal() {
+            document.getElementById("rejectReasonModal").classList.add("hidden");
+            pendingRejectRequestId = null;
+        }
+
+        async function submitRejectReason() {
+            if (!pendingRejectRequestId) return;
+            const requestId = pendingRejectRequestId;
+            const reason = document.getElementById("rejectReasonInput").value.trim() || "Rejected by librarian.";
+            closeRejectModal();
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const res = await LibraryAPI.rejectRequest(requestId, librarianId, reason);
+            showAdminToast(res.message);
+            renderCirculation();
+            loadAdminData();
+        }
+
+        async function renderFinesDesk() {
+            const tbody = document.getElementById("finesTableBody");
+            if (!tbody) return;
+            try {
+                const librarianId = currentAdmin.email || currentAdmin.userId || "";
+                const fines = await LibraryAPI.getAllFines(librarianId);
+                if (fines.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-6 text-center text-xs text-textMuted">No fine records found.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = fines.map(f => {
+                    const chipClass = f.status === 'PAID' ? 'chip-success' : f.status === 'PARTIALLY_PAID' ? 'chip-warning' : 'chip-danger';
+                    const remaining = parseFloat(f.remaining_amount || 0);
+                    return `
+                    <tr>
+                        <td class="font-mono text-xs font-medium">${f.user_id}</td>
+                        <td class="font-semibold text-textMain">${f.book_title || 'Engineering Textbook'}</td>
+                        <td class="text-textMuted">${f.due_date || '-'}</td>
+                        <td class="text-textMuted">${f.overdue_days} d</td>
+                        <td class="font-semibold">₹${parseFloat(f.fine_amount || 0).toFixed(2)}</td>
+                        <td class="text-success font-semibold">₹${parseFloat(f.paid_amount || 0).toFixed(2)}</td>
+                        <td class="font-semibold text-danger">₹${remaining.toFixed(2)}</td>
+                        <td><span class="chip ${chipClass}">${f.status}</span></td>
+                        <td class="text-right">
+                            ${remaining > 0 
+                                ? `<button onclick="openSettleFineModal(${f.id}, '${f.user_id}', '${(f.book_title || '').replace(/'/g, "\\'")}', ${remaining})" class="btn-primary text-xs h-7 px-2">Record Payment</button>`
+                                : `<span class="text-xs font-medium text-success">Settled</span>`
+                            }
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-6 text-center text-xs text-danger font-medium">Unable to load fine records.</td></tr>`;
+            }
+        }
+
+        async function renderWaitlistDesk() {
+            const tbody = document.getElementById("waitlistTableBody");
+            if (!tbody) return;
+            try {
+                const waitlists = await LibraryAPI.getWaitlist();
+                if (waitlists.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-xs text-textMuted">No active waitlists.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = waitlists.map(w => `
+                    <tr>
+                        <td class="font-semibold text-textMain">${w.book_title || 'Textbook'} <span class="text-textMuted font-mono">(${w.book_id})</span></td>
+                        <td class="font-mono text-xs font-medium">${w.user_id}</td>
+                        <td class="font-semibold text-primary">Pos #${w.position}</td>
+                        <td class="text-textMuted">${w.joined_at ? w.joined_at.substring(0,10) : 'Recently'}</td>
+                        <td><span class="chip chip-info">${w.status}</span></td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-xs text-danger font-medium">Unable to load waitlists.</td></tr>`;
+            }
+        }
+
+        function openSettleFineModal(id, student, book, remaining) {
+            document.getElementById("settleFineId").value = id;
+            document.getElementById("settleStudent").value = student;
+            document.getElementById("settleBook").value = book;
+            document.getElementById("settleRemaining").value = remaining.toFixed(2);
+            document.getElementById("settleAmount").value = remaining.toFixed(2);
+            document.getElementById("settleFineModal").classList.remove("hidden");
+        }
+
+        function toggleSettleFineModal() {
+            document.getElementById("settleFineModal").classList.toggle("hidden");
+        }
+
+        async function handleSettleFineSubmit(e) {
+            e.preventDefault();
+            const fineId = document.getElementById("settleFineId").value;
+            const amountPaid = document.getElementById("settleAmount").value;
+            const paymentMethod = document.getElementById("settleMethod").value;
+            const paymentRef = document.getElementById("settleRef").value;
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+
+            const res = await LibraryAPI.settleFine(fineId, amountPaid, paymentMethod, paymentRef, librarianId);
+            showAdminToast(res.message);
+            toggleSettleFineModal();
+            renderFinesDesk();
+            loadAdminData();
+        }
+
+        let allInventoryBooks = [];
+        let bookToDeleteId = "";
+
+        async function renderInventory() {
+            const tbody = document.getElementById("inventoryTableBody");
+            if (!tbody) return;
+            try {
+                const search = (document.getElementById("inventorySearchInput")?.value || "").trim();
+                const books = await LibraryAPI.getBooks(search);
+                allInventoryBooks = books;
+                if (!books || books.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-xs text-textMuted">No catalogue books found.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = books.map(b => {
+                    const available = Number(b.available_copies || 0);
+                    const total = Number(b.total_copies || 0);
+                    return `
+                    <tr>
+                        <td>
+                            <p class="font-semibold text-textMain">${b.title || 'Untitled'}</p>
+                            <p class="text-[10px] font-mono text-textMuted">${b.book_id || b.id}</p>
+                        </td>
+                        <td class="text-textMuted">${b.author || '-'}</td>
+                        <td class="font-mono text-xs text-textMuted">${b.isbn || '-'}</td>
+                        <td><span class="chip chip-info">${b.category || b.department || 'General'}</span></td>
+                        <td class="text-center font-semibold text-primary">${total}</td>
+                        <td class="text-center font-semibold ${available > 0 ? 'text-success' : 'text-danger'}">${available}</td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <button onclick="openEditBookModal('${b.book_id || b.id}')" class="btn-ghost text-xs h-7 px-2">Edit</button>
+                                <button onclick="promptDeleteBook('${b.book_id || b.id}', '${(b.title || '').replace(/'/g, "\\'")}')" class="btn-ghost text-xs text-danger h-7 px-2">Delete</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-6 text-center text-xs text-danger font-medium">Unable to load book inventory.</td></tr>`;
+            }
+        }
+
+        function openEditBookModal(bookId) {
+            const b = allInventoryBooks.find(x => (x.book_id || x.id) === bookId);
+            if (!b) return;
+            document.getElementById("editBookId").value = b.book_id || b.id;
+            document.getElementById("editBookIdDisplay").value = b.book_id || b.id;
+            document.getElementById("editIsbn").value = b.isbn || "";
+            document.getElementById("editTitle").value = b.title || "";
+            document.getElementById("editAuthor").value = b.author || "";
+            document.getElementById("editCategory").value = b.category || "General";
+            document.getElementById("editDept").value = b.department || "Computer Engineering";
+            document.getElementById("editCopies").value = b.total_copies || b.total_quantity || 1;
+            document.getElementById("editBookModal").classList.remove("hidden");
+        }
+
+        function toggleEditBookModal() {
+            document.getElementById("editBookModal").classList.toggle("hidden");
+        }
+
+        async function handleEditBookSubmit(e) {
+            e.preventDefault();
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const book = {
+                book_id: document.getElementById("editBookId").value,
+                isbn: document.getElementById("editIsbn").value,
+                title: document.getElementById("editTitle").value,
+                author: document.getElementById("editAuthor").value,
+                category: document.getElementById("editCategory").value,
+                department: document.getElementById("editDept").value,
+                copies: parseInt(document.getElementById("editCopies").value)
+            };
+            const res = await LibraryAPI.updateBook("librarian", librarianId, book);
+            showAdminToast(res.message);
+            if (res.success) {
+                toggleEditBookModal();
+                renderInventory();
+                loadAdminData();
+            }
+        }
+
+        function promptDeleteBook(bookId, title) {
+            bookToDeleteId = bookId;
+            document.getElementById("deleteBookIdDisplay").textContent = bookId;
+            document.getElementById("deleteBookTitle").textContent = title;
+            document.getElementById("deleteBookModal").classList.remove("hidden");
+        }
+
+        function toggleDeleteBookModal() {
+            document.getElementById("deleteBookModal").classList.toggle("hidden");
+        }
+
+        async function executeBookDeletion() {
+            if (!bookToDeleteId) return;
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const res = await LibraryAPI.deleteBook("librarian", librarianId, bookToDeleteId);
+            showAdminToast(res.message);
+            toggleDeleteBookModal();
+            if (res.success) {
+                renderInventory();
+                loadAdminData();
+            }
+        }
+
+        function toggleAddBookModal() {
+            document.getElementById("addBookModal").classList.toggle("hidden");
+        }
+
+        async function handleAddBook(e) {
+            e.preventDefault();
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const book = {
+                isbn: document.getElementById("addIsbn").value,
+                title: document.getElementById("addTitle").value,
+                author: document.getElementById("addAuthor").value,
+                category: "General",
+                department: document.getElementById("addDept").value,
+                copies: parseInt(document.getElementById("addCopies").value)
+            };
+            const res = await LibraryAPI.addBook("librarian", librarianId, book);
+            showAdminToast(res.message);
+            if (res.success) {
+                toggleAddBookModal();
+                renderInventory();
+                loadAdminData();
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem("currentUser");
+            window.location.href = "login.html";
+        }
+
+        async function loadUrgentOverdueHeap() {
+            const urgent = await LibraryAPI.getUrgentOverdue(6);
+            const container = document.getElementById("urgentHeapList");
+            if (!container) return;
+            if (!urgent.length) {
+                container.innerHTML = `<p class="col-span-full text-xs text-textMuted italic py-2">No urgent overdue records in Min-Heap priority queue.</p>`;
+                return;
+            }
+            container.innerHTML = urgent.map((item, idx) => `
+                <div class="ui-card p-3 space-y-1.5 text-xs bg-surface">
+                    <div class="flex items-center justify-between text-[10px] font-mono">
+                        <span class="chip chip-danger">HEAP #${idx}</span>
+                        <span class="text-textMuted">Loan #${item.loan_id}</span>
+                    </div>
+                    <p class="font-semibold text-textMain truncate">${item.book_title}</p>
+                    <p class="text-[11px] text-textMuted font-mono truncate">${item.student_username}</p>
+                    <div class="flex items-center justify-between pt-1 border-t border-border">
+                        <span class="text-textMuted text-[10px]">Due: ${item.due_date}</span>
+                        <span class="font-semibold text-danger">₹${parseFloat(item.fine_amount || 0).toFixed(2)}</span>
+                    </div>
+                    <button onclick="showReceipt(${item.loan_id})" class="btn-secondary text-[11px] h-6 w-full justify-center mt-1">
+                        <span class="material-symbols-outlined text-[14px]">receipt</span> Print Receipt
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function showReceipt(loanId) {
+            const res = await LibraryAPI.generateReceipt(loanId);
+            if (!res.success) {
+                showAdminToast(res.message);
+                return;
+            }
+            document.getElementById("rcptId").textContent = res.receiptId;
+            document.getElementById("receiptContent").innerHTML = `
+                <div class="space-y-1.5">
+                    <div class="flex justify-between"><span>Student:</span><strong>${res.studentName} (${res.studentEmail})</strong></div>
+                    <div class="flex justify-between"><span>Book Title:</span><strong>${res.bookTitle}</strong></div>
+                    <div class="flex justify-between"><span>Book ID:</span><strong>${res.bookId}</strong></div>
+                    <div class="flex justify-between"><span>Issue Date:</span><span>${res.issueDate}</span></div>
+                    <div class="flex justify-between"><span>Due Date:</span><span>${res.dueDate}</span></div>
+                    <div class="flex justify-between"><span>Return Date:</span><span>${res.returnDate}</span></div>
+                    <div class="flex justify-between text-primary font-bold border-t border-border pt-1.5"><span>Fine Amount:</span><span>₹${parseFloat(res.fineAmount).toFixed(2)}</span></div>
+                    <div class="flex justify-between"><span>Payment Status:</span><span class="text-success font-semibold">${res.fineStatus}</span></div>
+                    <div class="flex justify-between"><span>Payment Method:</span><span>${res.paymentMethod}</span></div>
+                    <div class="flex justify-between text-[10px] text-textMuted border-t border-border pt-1.5"><span>Authorized By:</span><span>${res.issuedBy}</span></div>
+                    <div class="flex justify-between text-[10px] text-textMuted"><span>Timestamp:</span><span>${res.timestamp}</span></div>
+                </div>
+            `;
+            document.getElementById("receiptModal").classList.remove("hidden");
+        }
+
+        function toggleReceiptModal() {
+            document.getElementById("receiptModal").classList.toggle("hidden");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMCOE Library - Admin Portal</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="js/api.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6d0000",
+                        primaryDark: "#4A0000",
+                        primaryLight: "#980000",
+                        crimson: "#C41E3A",
+                        background: "#fffaf9",
+                        surface: "#ffffff",
+                        surfaceLow: "#fff1ef",
+                        textMain: "#1f1412",
+                        textMuted: "#6e5551",
+                        border: "#ebd6d2",
+                        borderDark: "#d5afaa"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .toast-enter {
+            animation: slideInDown 0.3s ease-out;
+        }
+        @keyframes slideInDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-background antialiased flex flex-col lg:flex-row relative">
+
+    <!-- Toast Notification -->
+    <div id="adminToast" class="hidden fixed top-4 right-4 z-50 bg-primary text-white px-4 py-3 rounded-lg shadow-md border border-primaryLight flex items-center gap-2.5 text-xs font-medium toast-enter">
+        <span class="material-symbols-outlined text-[18px]">verified</span>
+        <p id="adminToastMsg">Transaction processed successfully!</p>
+    </div>
+
+    <!-- Desktop Sidebar (240px) -->
+    <aside id="appSidebar" class="hidden lg:flex flex-col w-60 bg-surface border-r border-border fixed top-0 bottom-0 left-0 z-30">
+        <!-- Sidebar Brand -->
+        <div class="h-14 px-5 border-b border-border flex items-center gap-3">
+            <img src="logo.jpg" alt="MMCOE Logo" class="w-8 h-8 object-contain">
+            <div>
+                <h1 class="text-sm font-bold text-primary leading-none">MMCOE Library</h1>
+                <p class="text-[10px] text-textMuted uppercase tracking-wider mt-0.5">Admin Portal</p>
+            </div>
+        </div>
+
+        <!-- Sidebar Navigation Links -->
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn nav-item active w-full">
+                <span class="material-symbols-outlined text-[20px]">query_stats</span>
+                <span>Analytics</span>
+            </button>
+            <button onclick="switchTab('dsa')" id="tab-dsa" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">account_tree</span>
+                <span>DSA Engine</span>
+            </button>
+            <button onclick="switchTab('timemachine')" id="tab-timemachine" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">schedule</span>
+                <span>Time Machine</span>
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">library_books</span>
+                <span>Book Inventory</span>
+            </button>
+            <button onclick="switchTab('members')" id="tab-members" class="tab-btn nav-item w-full">
+                <span class="material-symbols-outlined text-[20px]">group</span>
+                <span>Member Directory</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar User Footer -->
+        <div class="p-3 border-t border-border space-y-2">
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surfaceLow transition">
+                <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-xs shrink-0" id="adminAvatar">
+                    A
+                </div>
+                <div class="truncate text-left">
+                    <p class="text-xs font-semibold text-textMain truncate" id="adminName">Administrator</p>
+                    <p class="text-[10px] text-textMuted uppercase truncate" id="adminRole">ADMIN</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="btn-ghost w-full justify-start text-xs text-textMuted hover:text-danger">
+                <span class="material-symbols-outlined text-[18px]">logout</span>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Right Workspace Wrapper -->
+    <div class="flex-1 lg:ml-60 flex flex-col min-w-0">
+
+        <!-- Slim Top Bar (56px) -->
+        <header class="h-14 bg-surface border-b border-border sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-textMain">Administrator Control Panel</h2>
+            <div class="flex items-center gap-3">
+                <span class="chip chip-info">SYSTEM ONLINE</span>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6 pb-20 lg:pb-8">
+
+            <!-- TAB 1: SYSTEM ANALYTICS -->
+            <div id="view-analytics" class="space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div onclick="switchTab('inventory')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Total Book Titles</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statTitles">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Manage inventory <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('inventory')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Total Copy Stock</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statCopies">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">View copy stock <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('circulation')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Active Borrowings</p>
+                        <p class="text-2xl font-semibold text-primary tracking-tight" id="statActive">0</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Process returns <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+
+                    <div onclick="switchTab('circulation')" class="ui-card p-5 cursor-pointer hover:border-border-dark transition space-y-2">
+                        <p class="text-xs font-medium text-textMuted">Total Overdue Fines</p>
+                        <p class="text-2xl font-semibold text-danger tracking-tight" id="statOverdue">₹0.00</p>
+                        <p class="text-[11px] text-textMuted flex items-center gap-1">Fine details <span class="material-symbols-outlined text-[14px]">arrow_forward</span></p>
+                    </div>
+                </div>
+
+                <div class="ui-card p-6 space-y-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-textMain">System Borrowing Activity Log</h3>
+                        <p class="text-xs text-textMuted mt-0.5">Real-time status of current active loans and returned books</p>
+                    </div>
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Borrower User ID</th>
+                                    <th>Book Title</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analyticsLoansTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: CIRCULATION DESK (Admin Access) -->
+            <div id="view-circulation" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="ui-card p-6 space-y-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">approval</span>
+                                Pending Issue Requests
+                            </h3>
+                            <p class="text-xs text-textMuted mt-0.5">Users submit requests; approve or reject them.</p>
+                        </div>
+                        <div class="space-y-2" id="pendingRequestsList"></div>
+                    </div>
+
+                    <div class="ui-card p-6 space-y-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">input</span>
+                                Process Book Return Counter
+                            </h3>
+                            <p class="text-xs text-textMuted mt-0.5">Accept returned books and update stock</p>
+                        </div>
+                        <div class="space-y-2" id="returnList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: INVENTORY MANAGEMENT -->
+            <div id="view-inventory" class="space-y-4 hidden">
+                <div class="ui-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-textMain">Book Inventory Management</h2>
+                        <p class="text-xs text-textMuted mt-0.5">Manage catalogue textbooks, rack locations, and available stock copies</p>
+                    </div>
+                    <button onclick="toggleAddBookModal()" class="btn-primary">
+                        <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                        <span>Add New Book</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="inventoryGrid"></div>
+            </div>
+
+            <!-- TAB 4: MEMBER DIRECTORY -->
+            <div id="view-members" class="space-y-4 hidden">
+                <div class="ui-card p-6 space-y-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-textMain">Registered Library Members</h2>
+                        <p class="text-xs text-textMuted mt-0.5">Directory of students, faculty, administrators, and library staff</p>
+                    </div>
+                    <div class="overflow-x-auto border border-border rounded-lg">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Member ID / Email</th>
+                                    <th>Full Name</th>
+                                    <th>Role</th>
+                                    <th>Department</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberDirectoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: UNDER THE HOOD (DSA ENGINE & BENCHMARKS) -->
+            <div id="view-dsa" class="hidden space-y-6">
+                <div class="ui-card p-6 bg-surface-low border-border space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="chip chip-info">ENGINE REALIZATION</span>
+                            <h2 class="text-lg font-semibold text-textMain mt-2">Under the Hood — Custom DSA Architecture</h2>
+                            <p class="text-xs text-textMuted">Demonstrating native Java Data Structures, OS Concurrency Locks, and live benchmarks.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        <button onclick="runLiveBenchmark()" class="btn-primary text-xs">
+                            <span class="material-symbols-outlined text-[18px]">speed</span> Run Execution Benchmark
+                        </button>
+                        <button onclick="refreshDsaState()" class="btn-secondary text-xs">
+                            <span class="material-symbols-outlined text-[18px]">refresh</span> Refresh Pointers
+                        </button>
+                    </div>
+                </div>
+
+                <div id="benchmarkResultsCard" class="hidden ui-card p-6 space-y-3">
+                    <h3 class="font-semibold text-sm text-textMain flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-primary">bolt</span> Live Microsecond Benchmarks
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="benchmarkDetails"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Trie -->
+                    <div class="ui-card p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-border pb-2">
+                            <div>
+                                <h4 class="font-semibold text-sm text-textMain">1. Hand-Written Trie Prefix Search</h4>
+                                <p class="text-[10px] text-textMuted font-mono">Map&lt;Character, TrieNode&gt; · O(K) Complexity</p>
+                            </div>
+                            <span class="chip chip-success">ACTIVE</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded bg-surface-low"><span>Words Count</span><strong id="dsaTrieWords">0</strong></div>
+                            <div class="flex justify-between p-2 rounded bg-surface-low"><span>Books Count</span><strong id="dsaTrieBooks">0</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Heap -->
+                    <div class="ui-card p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-border pb-2">
+                            <div>
+                                <h4 class="font-semibold text-sm text-textMain">2. Binary Min-Heap Priority Queue</h4>
+                                <p class="text-[10px] text-textMuted font-mono">OverdueRecord[] · O(1) Peek</p>
+                            </div>
+                            <span class="chip chip-success">ACTIVE</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded bg-surface-low"><span>Heap Array Size</span><strong id="dsaHeapSize">0</strong></div>
+                            <div class="p-2 rounded bg-surface-low font-mono text-[11px]" id="dsaHeapArray">Heap[0]: Root</div>
+                        </div>
+                    </div>
+
+                    <!-- FIFO Queue -->
+                    <div class="ui-card p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-border pb-2">
+                            <div>
+                                <h4 class="font-semibold text-sm text-textMain">3. Linked List FIFO Waitlist Queue</h4>
+                                <p class="text-[10px] text-textMuted font-mono">Head ➔ Node ➔ Tail · O(1) Enqueue</p>
+                            </div>
+                            <span class="chip chip-success">ACTIVE</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded bg-surface-low"><span>Total Waiting Requests</span><strong id="dsaQueueWaiting">0</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Locks -->
+                    <div class="ui-card p-5 space-y-3">
+                        <div class="flex items-center justify-between border-b border-border pb-2">
+                            <div>
+                                <h4 class="font-semibold text-sm text-textMain">4. Hash Table & Fine-Grained Locks</h4>
+                                <p class="text-[10px] text-textMuted font-mono">ConcurrentHashMap & Locks</p>
+                            </div>
+                            <span class="chip chip-success">ACTIVE</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between p-2 rounded bg-surface-low"><span>Indexed Users (O(1))</span><strong id="dsaUsersCount">0</strong></div>
+                            <div class="p-2 rounded bg-surface-low font-mono text-[11px]" id="dsaLockState">Locks Active</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: TIME MACHINE & AUTOMATION -->
+            <div id="view-timemachine" class="hidden space-y-6">
+                <div class="ui-card p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-textMain flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">auto_mode</span>
+                                Time Machine & Background Automation
+                            </h3>
+                            <p class="text-xs text-textMuted mt-0.5">Fast-forward virtual system clock to demonstrate automated overdue sweeps and fine calculations.</p>
+                        </div>
+                        <div class="p-2.5 bg-surface-low rounded-lg border border-border text-right">
+                            <p class="text-[9px] font-bold text-textMuted uppercase">Virtual Date</p>
+                            <p class="text-sm font-semibold text-primary font-mono" id="tmVirtualDate">2026-09-23</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="text-xs font-medium text-textMain">Fast-Forward Increment:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="handleTimeTravel(1)" class="btn-primary text-xs">+1 Day</button>
+                            <button onclick="handleTimeTravel(7)" class="btn-primary text-xs">+7 Days (1 Week)</button>
+                            <button onclick="handleTimeTravel(14)" class="btn-primary text-xs">+14 Days (2 Weeks)</button>
+                            <button onclick="handleResetTimeTravel()" class="btn-secondary text-xs">Reset to Real Time</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation (<1024px) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface border-t border-border grid grid-cols-5 z-40">
+        <button onclick="switchTab('analytics')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-analytics">
+            <span class="material-symbols-outlined text-[20px]">query_stats</span>
+            <span class="text-[10px] font-medium">Stats</span>
+        </button>
+        <button onclick="switchTab('dsa')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-dsa">
+            <span class="material-symbols-outlined text-[20px]">account_tree</span>
+            <span class="text-[10px] font-medium">Engine</span>
+        </button>
+        <button onclick="switchTab('timemachine')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-timemachine">
+            <span class="material-symbols-outlined text-[20px]">schedule</span>
+            <span class="text-[10px] font-medium">Clock</span>
+        </button>
+        <button onclick="switchTab('inventory')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-inventory">
+            <span class="material-symbols-outlined text-[20px]">library_books</span>
+            <span class="text-[10px] font-medium">Books</span>
+        </button>
+        <button onclick="switchTab('members')" class="tab-btn flex flex-col items-center justify-center text-textMuted hover:text-primary transition" id="mobile-tab-members">
+            <span class="material-symbols-outlined text-[20px]">group</span>
+            <span class="text-[10px] font-medium">Members</span>
+        </button>
+    </nav>
+
+    <!-- Add Book Modal -->
+    <div id="addBookModal" class="hidden fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+        <div class="ui-card w-full max-w-md p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-border pb-3">
+                <h3 class="font-semibold text-base text-textMain">Add New Book to Inventory</h3>
+                <button onclick="toggleAddBookModal()" class="btn-ghost h-7 w-7 p-0 rounded-full"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <form onsubmit="handleAddBook(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-textMain mb-1">ISBN Number *</label>
+                    <input type="text" id="addIsbn" required placeholder="978-0131103627" class="ui-input font-mono">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Book Title *</label>
+                    <input type="text" id="addTitle" required placeholder="Introduction to Machine Learning" class="ui-input">
+                </div>
+                <div>
+                    <label class="block font-medium text-textMain mb-1">Author Name *</label>
+                    <input type="text" id="addAuthor" required placeholder="Ethem Alpaydin" class="ui-input">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Department</label>
+                        <select id="addDept" class="ui-input bg-white">
+                            <option value="Computer Engineering">Computer Engineering</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="AI & Data Science">AI & Data Science</option>
+                            <option value="E&TC Engineering">E&TC Engineering</option>
+                            <option value="Mechanical Engineering">Mechanical Engineering</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-textMain mb-1">Total Copies</label>
+                        <input type="number" id="addCopies" min="1" value="5" class="ui-input font-semibold">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-full mt-2">Save Book to Database</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentAdmin = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const userStr = sessionStorage.getItem("currentUser");
+            if (!userStr) {
+                window.location.href = "login.html";
+                return;
+            }
+            currentAdmin = JSON.parse(userStr);
+            if (currentAdmin.role !== "admin") {
+                alert("Access Restricted: Administrator credentials required.");
+                window.location.href = "dashboard.html";
+                return;
+            }
+
+            document.getElementById("adminName").textContent = currentAdmin.name || "Administrator";
+            document.getElementById("adminRole").textContent = (currentAdmin.role || "admin").toUpperCase();
+            document.getElementById("adminAvatar").textContent = (currentAdmin.name || "A")[0].toUpperCase();
+
+            loadAdminData();
+            loadMemberDirectory();
+            renderInventory();
+        });
+
+        function showAdminToast(msg) {
+            const toast = document.getElementById("adminToast");
+            document.getElementById("adminToastMsg").textContent = msg;
+            toast.classList.remove("hidden");
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 3000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            const btn = document.getElementById(`tab-${tabId}`);
+            if (btn) btn.classList.add("active");
+            const mobileBtn = document.getElementById(`mobile-tab-${tabId}`);
+            if (mobileBtn) mobileBtn.classList.add("active");
+
+            ["analytics", "circulation", "inventory", "members", "dsa", "timemachine"].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.add("hidden");
+            });
+            const target = document.getElementById(`view-${tabId}`);
+            if (target) target.classList.remove("hidden");
+
+            if (tabId === "circulation") renderCirculation();
+            if (tabId === "inventory") renderInventory();
+            if (tabId === "dsa") refreshDsaState();
+        }
+
+        async function refreshDsaState() {
+            try {
+                const data = await LibraryAPI.getDsaState();
+                if (!data.success) return;
+                document.getElementById("dsaTrieWords").textContent = data.trie.totalWords || 0;
+                document.getElementById("dsaTrieBooks").textContent = data.trie.totalBooksIndexed || 0;
+                document.getElementById("dsaHeapSize").textContent = data.minHeap.size || 0;
+                
+                const topK = data.minHeap.topK || [];
+                if (topK.length > 0) {
+                    document.getElementById("dsaHeapArray").innerHTML = topK.map((r, i) => 
+                        `[${i}] Loan #${r.loanId} (${r.studentUsername}) — Due: ${r.dueDate} — Fine: ₹${(r.fineAmount || 0).toFixed(2)}`
+                    ).join('<br>');
+                } else {
+                    document.getElementById("dsaHeapArray").textContent = "Heap is empty (0 overdue records)";
+                }
+
+                document.getElementById("dsaQueueWaiting").textContent = data.waitlistQueue.totalWaiting || 0;
+                document.getElementById("dsaUsersCount").textContent = data.userHashTable.totalUsers || 0;
+                document.getElementById("dsaLockState").textContent = data.concurrencyLocks.readWriteLock || "ReadWriteLock Active";
+            } catch (e) {}
+        }
+
+        async function runLiveBenchmark() {
+            const card = document.getElementById("benchmarkResultsCard");
+            card.classList.remove("hidden");
+            document.getElementById("benchmarkDetails").innerHTML = `<p class="text-xs text-textMuted animate-pulse col-span-full py-4 text-center">Running 500 execution iterations across Trie & Heap...</p>`;
+            
+            try {
+                const bench = await LibraryAPI.runBenchmark();
+                if (bench.success) {
+                    document.getElementById("benchmarkDetails").innerHTML = `
+                        <div class="p-3 bg-surface-low rounded-lg border border-border space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold text-xs text-primary">Trie Search vs Table Scan</span>
+                                <span class="chip chip-success">${bench.searchBenchmark.speedupFactor} FASTER</span>
+                            </div>
+                            <div class="text-xs font-mono text-textMuted mt-1">
+                                <p>Trie Autocomplete O(K): <strong class="text-primary">${bench.searchBenchmark.trieMicrosPerOp} µs</strong> / op</p>
+                                <p>Full Table Scan O(N): <strong>${bench.searchBenchmark.linearScanMicrosPerOp} µs</strong> / op</p>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-surface-low rounded-lg border border-border space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold text-xs text-primary">Min-Heap Top vs SQL Fetch</span>
+                                <span class="chip chip-success">${bench.heapBenchmark.speedupFactor} FASTER</span>
+                            </div>
+                            <div class="text-xs font-mono text-textMuted mt-1">
+                                <p>Min-Heap Peek O(1): <strong class="text-primary">${bench.heapBenchmark.heapMicrosPerOp} µs</strong> / op</p>
+                                <p>SQL ORDER BY Fetch O(N log N): <strong>${bench.heapBenchmark.sqlOrderByMicrosPerOp} µs</strong> / op</p>
+                            </div>
+                        </div>`;
+                }
+            } catch (e) {
+                document.getElementById("benchmarkDetails").innerHTML = `<p class="text-xs text-danger col-span-full py-4 text-center">Benchmark failed to execute.</p>`;
+            }
+        }
+
+        async function handleTimeTravel(days) {
+            const res = await LibraryAPI.timeTravel(days);
+            showAdminToast(res.message);
+            document.getElementById("tmVirtualDate").textContent = res.virtualDate;
+            await refreshDsaState();
+            await loadAdminData();
+        }
+
+        async function handleResetTimeTravel() {
+            const res = await LibraryAPI.timeTravel(0);
+            showAdminToast(res.message);
+            document.getElementById("tmVirtualDate").textContent = res.virtualDate;
+            await refreshDsaState();
+            await loadAdminData();
+        }
+
+        async function loadAdminData() {
+            const stats = await LibraryAPI.getStats();
+            document.getElementById("statTitles").textContent = stats.totalTitles;
+            document.getElementById("statCopies").textContent = stats.totalCopies;
+            document.getElementById("statActive").textContent = stats.activeLoans;
+            document.getElementById("statOverdue").textContent = `₹${(stats.totalFines || 0).toFixed(2)}`;
+
+            const loans = await LibraryAPI.getLoans();
+            document.getElementById("analyticsLoansTable").innerHTML = loans.map(l => `
+                <tr>
+                    <td class="font-mono text-xs font-medium">${l.user_id}</td>
+                    <td class="font-semibold text-textMain">${l.book_title || 'Engineering Textbook'}</td>
+                    <td class="text-textMuted">${l.issue_date}</td>
+                    <td class="text-textMuted">${l.due_date}</td>
+                    <td>
+                        <span class="chip ${l.status === 'overdue' ? 'chip-danger' : 'chip-success'}">${l.status.toUpperCase()}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function renderInventory() {
+            const grid = document.getElementById("inventoryGrid");
+            if (!grid) return;
+            try {
+                const books = await LibraryAPI.getBooks();
+                if (!books.length) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-textMuted">No books found in inventory.</div>`;
+                    return;
+                }
+                grid.innerHTML = books.map(b => {
+                    const available = Number(b.available_copies || 0);
+                    const total = Number(b.total_copies || 0);
+                    const issued = Math.max(0, total - available);
+                    return `<article class="ui-card p-5 space-y-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="chip chip-info">${b.category || b.department || 'BOOK'}</span>
+                            <span class="text-[10px] font-mono text-textMuted">ID: ${b.book_id || b.id}</span>
+                        </div>
+                        <h3 class="font-semibold text-base text-textMain leading-snug">${b.title || 'Untitled'}</h3>
+                        <p class="text-xs text-textMuted">Author: ${b.author || '-'}</p>
+                        <div class="p-2 rounded bg-surface-low border border-border text-[11px] font-mono text-textMuted">
+                            ISBN: ${b.isbn || '-'}
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div class="border border-border rounded p-1.5"><p class="text-[9px] text-textMuted font-medium uppercase">Total</p><p class="font-semibold text-primary">${total}</p></div>
+                            <div class="border border-success/30 bg-success-bg rounded p-1.5"><p class="text-[9px] text-success font-medium uppercase">Available</p><p class="font-semibold text-success">${available}</p></div>
+                            <div class="border border-warning/30 bg-warning-bg rounded p-1.5"><p class="text-[9px] text-warning font-medium uppercase">Issued</p><p class="font-semibold text-warning">${issued}</p></div>
+                        </div>
+                    </article>`;
+                }).join('');
+            } catch (e) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-danger font-medium">Unable to load book inventory.</div>`;
+            }
+        }
+
+        async function loadMemberDirectory() {
+            const body = document.getElementById("memberDirectoryBody");
+            if (!body) return;
+            try {
+                const users = await LibraryAPI.getUsers(currentAdmin.email || currentAdmin.userId || "");
+                body.innerHTML = users.map(u => `
+                    <tr>
+                        <td class="font-mono text-xs font-medium">${u.id || ""}<br><span class="text-[10px] text-textMuted font-sans">${u.email || ""}</span></td>
+                        <td class="font-semibold text-textMain">${u.name || ""}</td>
+                        <td><span class="chip chip-info">${String(u.role || "").toUpperCase()}</span></td>
+                        <td class="text-textMuted">${u.department || "-"}</td>
+                    </tr>`).join("") || `<tr><td colspan="4" class="px-4 py-6 text-center text-xs text-textMuted">No members found.</td></tr>`;
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-xs text-danger">Unable to load member directory.</td></tr>`;
+            }
+        }
+
+        async function renderCirculation() {
+            const pending = await LibraryAPI.getPendingRequests();
+            const pendingEl = document.getElementById("pendingRequestsList");
+            if (pending.length === 0) {
+                pendingEl.innerHTML = `<p class="text-xs text-textMuted italic">No pending issue requests.</p>`;
+            } else {
+                pendingEl.innerHTML = pending.map(r => `
+                    <div class="p-3 bg-surface-low border border-border rounded-lg flex items-center justify-between gap-3 text-xs">
+                        <div>
+                            <p class="font-semibold text-textMain">${r.book_title}</p>
+                            <p class="text-[11px] text-textMuted font-mono mt-0.5">User: ${r.user_id}</p>
+                            <p class="text-[10px] text-textMuted mt-0.5">Request #${r.id}</p>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="approveIssueRequest(${r.id})" class="btn-primary text-xs h-7 px-2">Accept</button>
+                            <button onclick="rejectIssueRequest(${r.id})" class="btn-danger text-xs h-7 px-2">Reject</button>
+                        </div>
+                    </div>`).join('');
+            }
+
+            const loans = await LibraryAPI.getLoans();
+            const active = loans.filter(l => l.status === "issued" || l.status === "overdue");
+            let returnHtml = active.map(l => `
+                <div class="p-3 bg-surface-low border border-border rounded-lg flex items-center justify-between gap-3 text-xs">
+                    <div>
+                        <p class="font-semibold text-textMain">${l.book_title || 'Textbook'}</p>
+                        <p class="text-[11px] text-textMuted font-mono mt-0.5">Borrower: ${l.user_id}</p>
+                        <p class="text-[10px] text-textMuted mt-0.5">Due: ${l.due_date} | Fine: ₹${parseFloat(l.fine_amount || 0).toFixed(2)}</p>
+                    </div>
+                    <button onclick="handleReturn(${l.id})" class="btn-primary text-xs h-7 px-2">Return Book</button>
+                </div>`).join('');
+            document.getElementById("returnList").innerHTML = returnHtml || `<p class="text-xs text-textMuted italic">No active loans.</p>`;
+        }
+
+        async function approveIssueRequest(requestId) {
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const res = await LibraryAPI.approveRequest(requestId, librarianId);
+            showAdminToast(res.message);
+            await renderCirculation();
+            await loadAdminData();
+        }
+
+        async function rejectIssueRequest(requestId) {
+            const librarianId = currentAdmin.email || currentAdmin.userId || "";
+            const reason = window.prompt("Reason for rejection:", "Rejected by librarian.");
+            if (reason === null) return;
+            const res = await LibraryAPI.rejectRequest(requestId, librarianId, reason);
+            showAdminToast(res.message);
+            await renderCirculation();
+            await loadAdminData();
+        }
+
+        async function handleReturn(loanId) {
+            const res = await LibraryAPI.returnBook(loanId, currentAdmin.email || "");
+            showAdminToast(res.message);
+            renderCirculation();
+            loadAdminData();
+        }
+
+        function toggleAddBookModal() {
+            document.getElementById("addBookModal").classList.toggle("hidden");
+        }
+
+        async function handleAddBook(e) {
+            e.preventDefault();
+            const book = {
+                isbn: document.getElementById("addIsbn").value,
+                title: document.getElementById("addTitle").value,
+                author: document.getElementById("addAuthor").value,
+                department: document.getElementById("addDept").value,
+                total_copies: document.getElementById("addCopies").value
+            };
+            await LibraryAPI.addBook(book);
+            showAdminToast("New book saved to inventory!");
+            toggleAddBookModal();
+            renderInventory();
+            loadAdminData();
+        }
+
+        function logout() {
+            sessionStorage.removeItem("currentUser");
+            window.location.href = "login.html";
+        }
+    </script>
+</body>
+</html>

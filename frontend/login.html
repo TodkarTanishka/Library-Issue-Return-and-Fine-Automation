@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMCOE Library - Sign In</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/theme.css">
+    <script src="js/api.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6d0000",
+                        primaryDark: "#4A0000",
+                        primaryLight: "#980000",
+                        crimson: "#C41E3A",
+                        background: "#fffaf9",
+                        surface: "#ffffff",
+                        surfaceLow: "#fff1ef",
+                        textMain: "#1f1412",
+                        textMuted: "#6e5551",
+                        border: "#ebd6d2",
+                        borderDark: "#d5afaa"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .login-type-wrapper {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            height: 38px;
+            background: var(--surface-low);
+            padding: 3px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .login-type-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: calc(50% - 3px);
+            height: calc(100% - 6px);
+            background: var(--primary);
+            border-radius: 6px;
+            transition: transform 0.2s ease;
+        }
+        .login-type-slider.admin {
+            transform: translateX(100%);
+        }
+        .login-type-button {
+            position: relative;
+            z-index: 2;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .login-type-button.active {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .login-type-button:not(.active):hover {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-background antialiased">
+
+    <!-- Slim Top Header -->
+    <header class="h-14 border-b border-border bg-surface px-4 sm:px-8 flex items-center justify-between">
+        <a href="landing.html" class="flex items-center gap-3 no-underline">
+            <img src="logo.jpg" alt="MMCOE Logo" class="w-8 h-8 object-contain">
+            <div>
+                <h1 class="text-base font-bold text-primary leading-none">MMCOE Library</h1>
+                <p class="text-[10px] text-textMuted uppercase tracking-wider mt-0.5">Central Portal</p>
+            </div>
+        </a>
+        <a href="landing.html" class="text-xs font-medium text-textMuted hover:text-primary transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            <span>Back to Home</span>
+        </a>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div class="w-full max-w-[400px] ui-card p-6 sm:p-8 space-y-6">
+            
+            <!-- Card Header -->
+            <div class="space-y-1">
+                <div class="w-8 h-1 bg-primary rounded-full mb-3"></div>
+                <h2 id="loginTitle" class="text-2xl font-semibold text-textMain tracking-tight">User Login</h2>
+                <p id="loginDescription" class="text-xs text-textMuted leading-relaxed">Students and faculty can login to access library services.</p>
+            </div>
+
+            <!-- Segmented Login Type Control -->
+            <div class="space-y-1.5">
+                <label class="block text-xs font-medium text-textMuted">Account Type</label>
+                <div class="login-type-wrapper">
+                    <div id="loginTypeSlider" class="login-type-slider"></div>
+                    <button id="userOption" type="button" onclick="selectLoginType('user')" class="login-type-button active">
+                        <span class="material-symbols-outlined text-[18px]">person</span>
+                        <span>User Login</span>
+                    </button>
+                    <button id="adminOption" type="button" onclick="selectLoginType('admin')" class="login-type-button">
+                        <span class="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                        <span>Admin Login</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                
+                <!-- Admin Role Selector (Hidden for User Login) -->
+                <div id="adminRoleContainer" class="hidden space-y-1.5">
+                    <label for="adminRole" class="block text-xs font-medium text-textMain">Login As Role</label>
+                    <div class="relative">
+                        <select id="adminRole" onchange="updateAdminRole()" class="ui-input pr-10 appearance-none bg-white">
+                            <option value="" selected disabled>Select role</option>
+                            <option value="admin">Administrator</option>
+                            <option value="librarian">Librarian Staff</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-textMuted pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+                </div>
+
+                <!-- Username / Email Field -->
+                <div class="space-y-1.5">
+                    <label id="usernameLabel" for="username" class="block text-xs font-medium text-textMain">Email ID</label>
+                    <div class="relative">
+                        <span id="usernameIcon" class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-textMuted text-[18px]">mail</span>
+                        <input id="username" type="text" required autocomplete="username" placeholder="Enter your email ID" class="ui-input pl-10">
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label for="password" class="block text-xs font-medium text-textMain">Password</label>
+                        <a href="#" onclick="forgotPassword(event)" class="text-xs font-medium text-primary hover:underline">Forgot?</a>
+                    </div>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-textMuted text-[18px]">lock</span>
+                        <input id="password" type="password" required autocomplete="current-password" placeholder="Enter your password" class="ui-input pl-10 pr-10">
+                        <button type="button" onclick="togglePassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-primary transition border-none bg-transparent p-0 cursor-pointer" aria-label="Show password">
+                            <span id="passwordIcon" class="material-symbols-outlined text-[18px]">visibility</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button id="loginButton" type="submit" class="btn-primary w-full h-10 mt-2">
+                    <span class="material-symbols-outlined text-[18px]">login</span>
+                    <span id="loginButtonText">Login as User</span>
+                </button>
+            </form>
+
+            <!-- Inline Validation & Message Container -->
+            <div id="loginMessage" class="hidden p-3 rounded-lg bg-danger-bg border border-danger text-xs text-danger leading-relaxed"></div>
+
+
+
+            <!-- Footer -->
+            <div class="text-center pt-2">
+                <p class="text-[11px] text-textMuted">© 2026 MMCOE Central Library</p>
+            </div>
+        </div>
+    </main>
+
+<script>
+    let currentLoginType = "user";
+
+    function quickFill(type, user, pass) {
+        if (type === 'user') {
+            selectLoginType('user');
+            document.getElementById("username").value = user;
+            document.getElementById("password").value = pass;
+        } else if (type === 'librarian') {
+            selectLoginType('admin');
+            document.getElementById("adminRole").value = 'librarian';
+            updateAdminRole();
+            document.getElementById("username").value = user;
+            document.getElementById("password").value = pass;
+        } else if (type === 'admin') {
+            selectLoginType('admin');
+            document.getElementById("adminRole").value = 'admin';
+            updateAdminRole();
+            document.getElementById("username").value = user;
+            document.getElementById("password").value = pass;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const params = new URLSearchParams(window.location.search);
+        const type = params.get("type");
+        if (type === "admin") {
+            selectLoginType("admin");
+        } else {
+            selectLoginType("user");
+        }
+    });
+
+    function selectLoginType(type) {
+        currentLoginType = type;
+        const adminOption = document.getElementById("adminOption");
+        const userOption = document.getElementById("userOption");
+        const slider = document.getElementById("loginTypeSlider");
+        const adminRoleContainer = document.getElementById("adminRoleContainer");
+        const loginTitle = document.getElementById("loginTitle");
+        const loginDescription = document.getElementById("loginDescription");
+        const usernameLabel = document.getElementById("usernameLabel");
+        const username = document.getElementById("username");
+        const usernameIcon = document.getElementById("usernameIcon");
+        const password = document.getElementById("password");
+        const loginButton = document.getElementById("loginButton");
+        const loginButtonText = document.getElementById("loginButtonText");
+        const adminRole = document.getElementById("adminRole");
+        const loginMessage = document.getElementById("loginMessage");
+
+        username.value = "";
+        password.value = "";
+        loginMessage.classList.add("hidden");
+
+        if (type === "user") {
+            slider.classList.remove("admin");
+            userOption.classList.add("active");
+            adminOption.classList.remove("active");
+            adminRoleContainer.classList.add("hidden");
+            loginTitle.textContent = "User Login";
+            loginDescription.textContent = "Students and faculty can login to access library services.";
+            usernameLabel.textContent = "Email ID";
+            usernameIcon.textContent = "mail";
+            username.placeholder = "Enter your email ID";
+            username.disabled = false;
+            password.disabled = false;
+            loginButton.disabled = false;
+            loginButtonText.textContent = "Login as User";
+        } else {
+            slider.classList.add("admin");
+            adminOption.classList.add("active");
+            userOption.classList.remove("active");
+            adminRoleContainer.classList.remove("hidden");
+            adminRole.value = "";
+            loginTitle.textContent = "Admin Login";
+            loginDescription.textContent = "Please select your login role.";
+            usernameLabel.textContent = "Admin ID";
+            usernameIcon.textContent = "badge";
+            username.placeholder = "Select a login role first";
+            username.disabled = true;
+            password.disabled = true;
+            loginButton.disabled = true;
+            loginButtonText.textContent = "Select Login Role";
+        }
+
+        password.type = "password";
+        document.getElementById("passwordIcon").textContent = "visibility";
+    }
+
+    function updateAdminRole() {
+        const role = document.getElementById("adminRole").value;
+        const loginTitle = document.getElementById("loginTitle");
+        const loginDescription = document.getElementById("loginDescription");
+        const usernameLabel = document.getElementById("usernameLabel");
+        const username = document.getElementById("username");
+        const usernameIcon = document.getElementById("usernameIcon");
+        const password = document.getElementById("password");
+        const loginButton = document.getElementById("loginButton");
+        const loginButtonText = document.getElementById("loginButtonText");
+        const loginMessage = document.getElementById("loginMessage");
+
+        username.value = "";
+        password.value = "";
+        loginMessage.classList.add("hidden");
+
+        if (!role) {
+            username.disabled = true;
+            password.disabled = true;
+            loginButton.disabled = true;
+            loginTitle.textContent = "Admin Login";
+            loginDescription.textContent = "Please select your login role.";
+            loginButtonText.textContent = "Select Login Role";
+            return;
+        }
+
+        if (role === "admin") {
+            loginTitle.textContent = "Admin Login";
+            loginDescription.textContent = "Login using your administrator credentials.";
+            usernameLabel.textContent = "Admin ID";
+            usernameIcon.textContent = "badge";
+            username.placeholder = "Enter your Admin ID";
+            loginButtonText.textContent = "Login as Admin";
+        } else {
+            loginTitle.textContent = "Librarian Login";
+            loginDescription.textContent = "Login using your librarian credentials.";
+            usernameLabel.textContent = "Email ID";
+            usernameIcon.textContent = "mail";
+            username.placeholder = "Enter your email ID";
+            loginButtonText.textContent = "Login as Librarian";
+        }
+
+        username.disabled = false;
+        password.disabled = false;
+        loginButton.disabled = false;
+    }
+
+    function togglePassword() {
+        const password = document.getElementById("password");
+        const icon = document.getElementById("passwordIcon");
+
+        if (password.disabled) return;
+
+        if (password.type === "password") {
+            password.type = "text";
+            icon.textContent = "visibility_off";
+        } else {
+            password.type = "password";
+            icon.textContent = "visibility";
+        }
+    }
+
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+        const loginButton = document.getElementById("loginButton");
+        const loginButtonText = document.getElementById("loginButtonText");
+
+        if (!username || !password) {
+            showMessage("Please enter both Email/Admin ID and Password.");
+            return;
+        }
+
+        let selectedRole = "";
+        let loginType = currentLoginType;
+        if (currentLoginType === "admin") {
+            const role = document.getElementById("adminRole").value;
+            if (!role) {
+                showMessage("Please select whether you are logging in as Admin or Librarian.");
+                return;
+            }
+            selectedRole = role;
+        }
+
+        loginButton.disabled = true;
+        loginButtonText.textContent = "Authenticating...";
+
+        try {
+            const res = await LibraryAPI.login(username, password, selectedRole, loginType);
+
+            if (res.success && res.user) {
+                sessionStorage.setItem("currentUser", JSON.stringify(res.user));
+                showMessage("Login successful! Redirecting to portal...");
+                document.getElementById("loginMessage").className = "message mt-4 p-3 bg-success-bg border border-success rounded-lg text-xs text-success font-medium";
+
+                setTimeout(() => {
+                    if (res.user.role === "admin") {
+                        window.location.href = "admin-dashboard.html";
+                    } else if (res.user.role === "librarian") {
+                        window.location.href = "librarian-dashboard.html";
+                    } else {
+                        window.location.href = "dashboard.html";
+                    }
+                }, 750);
+            } else {
+                document.getElementById("loginMessage").className = "message mt-4 p-3 bg-danger-bg border border-danger rounded-lg text-xs text-danger font-medium";
+                showMessage(res.message || "Invalid credentials. Please check your login details.");
+                loginButton.disabled = false;
+                loginButtonText.textContent = currentLoginType === "admin" ? "Login as Admin" : "Login as User";
+            }
+        } catch (err) {
+            console.error("Login Error:", err);
+            document.getElementById("loginMessage").className = "message mt-4 p-3 bg-danger-bg border border-danger rounded-lg text-xs text-danger font-medium";
+            showMessage("Authentication error: " + err.message);
+            loginButton.disabled = false;
+            loginButtonText.textContent = currentLoginType === "admin" ? "Login as Admin" : "Login as User";
+        }
+    }
+
+    function fillDemo(type) {
+        if (type === "admin") {
+            selectLoginType("admin");
+            document.getElementById("adminRole").value = "admin";
+            updateAdminRole();
+            document.getElementById("username").value = "admin@mmcoe.edu.in";
+            document.getElementById("password").value = "admin123";
+        } else if (type === "staff") {
+            selectLoginType("admin");
+            document.getElementById("adminRole").value = "librarian";
+            updateAdminRole();
+            document.getElementById("username").value = "staff1@mmcoe.edu.in";
+            document.getElementById("password").value = "staff123";
+        } else if (type === "faculty") {
+            selectLoginType("user");
+            document.getElementById("username").value = "sankirtihiravale@mmcoe.edu.in";
+            document.getElementById("password").value = "sankriti@CEF101";
+        } else {
+            selectLoginType("user");
+            document.getElementById("username").value = "tanishkatodkar2025.comp@mmcoe.edu.in";
+            document.getElementById("password").value = "B25CE2006";
+        }
+    }
+
+    function forgotPassword(event) {
+        event.preventDefault();
+        showMessage("Please contact the library administration to reset your password.");
+    }
+
+    function showMessage(text) {
+        const message = document.getElementById("loginMessage");
+        message.classList.remove("hidden");
+        message.innerHTML = `
+            <div class="flex items-start gap-2">
+                <span class="material-symbols-outlined text-primary text-[18px]">info</span>
+                <p>${text}</p>
+            </div>
+        `;
+    }
+</script>
+
+</body>
+</html>

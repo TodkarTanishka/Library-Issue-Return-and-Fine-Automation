@@ -1,0 +1,17 @@
+# Build / generated files
+build/
+*.class
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

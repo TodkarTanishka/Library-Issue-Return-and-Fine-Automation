@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMCOE Library Management System</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/theme.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6d0000",
+                        primaryDark: "#4A0000",
+                        primaryLight: "#980000",
+                        crimson: "#C41E3A",
+                        background: "#fffaf9",
+                        surface: "#ffffff",
+                        surfaceLow: "#fff1ef",
+                        textMain: "#1f1412",
+                        textMuted: "#6e5551",
+                        border: "#ebd6d2",
+                        borderDark: "#d5afaa"
+                    },
+                    fontFamily: {
+                        inter: ["Inter", "sans-serif"]
+                    },
+                    maxWidth: {
+                        site: "1200px"
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body { margin: 0; font-family: "Inter", sans-serif; background-color: var(--bg-canvas); color: var(--text-main); }
+        .material-symbols-outlined { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
+        .modal { transition: opacity .2s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal.hidden { display: none; }
+        body.modal-open { overflow: hidden; }
+        #mobileMenu { transition: max-height .3s ease, opacity .3s ease; }
+        
+        .hero-pattern {
+            background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .library-slider {
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+            touch-action: pan-y;
+            user-select: none;
+        }
+
+        .library-slider-track {
+            display: flex;
+            width: 100%;
+            transform: translateX(0);
+            transition: transform .65s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        .library-slide {
+            width: 100%;
+            flex: 0 0 100%;
+        }
+
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(109, 0, 0, .85);
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all .15s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+        }
+
+        .slider-arrow:hover {
+            background: #4A0000;
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .slider-arrow-left { left: 12px; }
+        .slider-arrow-right { right: 12px; }
+
+        .slider-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .slider-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.5);
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+
+        .slider-dot.active {
+            width: 22px;
+            background: white;
+        }
+
+        .service-card, .resource-card {
+            transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+        }
+        .service-card:hover, .resource-card:hover {
+            border-color: var(--border-focus);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+    </style>
+</head>
+
+<body class="bg-background text-textMain antialiased min-h-screen flex flex-col">
+
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="h-16 flex items-center justify-between gap-4">
+
+            <!-- Brand Logo -->
+            <a href="#home" class="flex items-center gap-3">
+                <img src="logo.jpg" alt="MMCOE Logo" class="w-9 h-9 object-contain rounded-md">
+                <div class="flex flex-col">
+                    <span class="text-base font-bold text-primary tracking-tight leading-none">MMCOE</span>
+                    <span class="text-[10px] text-textMuted tracking-wide font-medium mt-0.5">Central Library Portal</span>
+                </div>
+            </a>
+
+            <!-- Desktop Nav Links -->
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="#home" class="text-xs font-semibold text-primary hover:text-primaryDark transition">Home</a>
+                <a href="#services" class="text-xs font-medium text-textMuted hover:text-textMain transition">Services</a>
+                <a href="#resources" class="text-xs font-medium text-textMuted hover:text-textMain transition">E-Resources</a>
+                <button onclick="openModal('libraryRulesModal')" class="text-xs font-medium text-textMuted hover:text-textMain transition">Rules</button>
+                <button onclick="openModal('circulationRulesModal')" class="text-xs font-medium text-textMuted hover:text-textMain transition">Circulation</button>
+            </nav>
+
+            <!-- Actions -->
+            <div class="hidden sm:flex items-center gap-2.5">
+                <button onclick="window.location.href='login.html?type=user'" class="btn-secondary text-xs py-1.5 px-3.5">
+                    User Login
+                </button>
+                <button onclick="window.location.href='login.html?type=admin'" class="btn-primary text-xs py-1.5 px-3.5">
+                    Admin Portal
+                </button>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button id="menuButton" class="md:hidden p-2 text-textMuted hover:text-textMain" aria-label="Toggle Navigation">
+                <span id="menuIcon" class="material-symbols-outlined text-2xl">menu</span>
+            </button>
+
+        </div>
+
+        <!-- Mobile Menu Container -->
+        <div id="mobileMenu" class="md:hidden max-h-0 opacity-0 overflow-hidden">
+            <nav class="flex flex-col border-t border-border py-3 space-y-1">
+                <a href="#home" class="px-3 py-2 text-xs font-semibold text-primary rounded-md hover:bg-surfaceLow">Home</a>
+                <a href="#services" class="px-3 py-2 text-xs font-medium text-textMuted rounded-md hover:bg-surfaceLow">Services</a>
+                <a href="#resources" class="px-3 py-2 text-xs font-medium text-textMuted rounded-md hover:bg-surfaceLow">E-Resources</a>
+                <button onclick="openModal('libraryRulesModal')" class="w-full text-left px-3 py-2 text-xs font-medium text-textMuted rounded-md hover:bg-surfaceLow">Library Rules</button>
+                <button onclick="openModal('circulationRulesModal')" class="w-full text-left px-3 py-2 text-xs font-medium text-textMuted rounded-md hover:bg-surfaceLow">Circulation Rules</button>
+                
+                <div class="flex flex-col gap-2 pt-3 border-t border-border mt-2 px-1">
+                    <button onclick="window.location.href='login.html?type=user'" class="btn-secondary text-xs py-2 w-full justify-center">
+                        User Login
+                    </button>
+                    <button onclick="window.location.href='login.html?type=admin'" class="btn-primary text-xs py-2 w-full justify-center">
+                        Admin Portal
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </div>
+</header>
+
+<main id="home" class="flex-grow">
+
+<!-- Hero Section -->
+<section class="relative hero-pattern py-12 sm:py-16 lg:py-20 border-b border-border bg-gradient-to-b from-surfaceLow/40 to-background">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+
+            <!-- Hero Left Content -->
+            <div class="lg:col-span-6 flex flex-col items-start">
+                <div class="chip text-primary border-primary/20 bg-white mb-4">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    MMCOE Central Library
+                </div>
+
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-textMain tracking-tight leading-[1.15] mb-4">
+                    Automated Library Management &amp; <span class="text-primary">Resource Access</span>
+                </h1>
+
+                <p class="text-sm sm:text-base text-textMuted leading-relaxed mb-8 max-w-xl">
+                    Search book catalogues, automate issue-return transactions, track overdue fines, and seamlessly access digital journals and research repositories.
+                </p>
+
+                <div class="flex flex-wrap gap-3 w-full sm:w-auto">
+                    <button onclick="window.location.href='login.html?type=user'" class="btn-primary py-2.5 px-5 text-sm flex-1 sm:flex-initial justify-center shadow-sm">
+                        <span class="material-symbols-outlined text-lg">login</span>
+                        Sign In to Portal
+                    </button>
+                    <a href="#resources" class="btn-secondary py-2.5 px-5 text-sm flex-1 sm:flex-initial justify-center">
+                        Explore E-Resources
+                        <span class="material-symbols-outlined text-lg">arrow_downward</span>
+                    </a>
+                </div>
+
+                <!-- Stats Badges -->
+                <div class="grid grid-cols-3 gap-4 mt-10 pt-6 border-t border-border w-full">
+                    <div>
+                        <div class="text-xl font-bold text-primary">50,000+</div>
+                        <div class="text-[11px] text-textMuted font-medium mt-0.5">Print Volumes</div>
+                    </div>
+                    <div>
+                        <div class="text-xl font-bold text-primary">DSA Powered</div>
+                        <div class="text-[11px] text-textMuted font-medium mt-0.5">Real-time Waitlists</div>
+                    </div>
+                    <div>
+                        <div class="text-xl font-bold text-primary">24/7 Portal</div>
+                        <div class="text-[11px] text-textMuted font-medium mt-0.5">Online Discovery</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Right Content: Slider -->
+            <div class="lg:col-span-6">
+                <div class="ui-card p-2 shadow-lg bg-white">
+                    <div id="librarySlider" class="library-slider rounded-lg">
+                        <div id="librarySliderTrack" class="library-slider-track">
+                            <div class="library-slide">
+                                <img src="mmcoe_library.jpg" alt="MMCOE Library Interior" draggable="false" class="w-full h-[260px] sm:h-[340px] object-cover rounded-lg">
+                            </div>
+                            <div class="library-slide">
+                                <img src="mmcoe_library2.jpg" alt="MMCOE Library Reading Room" draggable="false" class="w-full h-[260px] sm:h-[340px] object-cover rounded-lg">
+                            </div>
+                            <div class="library-slide">
+                                <img src="mmcoe_library3.jpg" alt="MMCOE Library Stacks" draggable="false" class="w-full h-[260px] sm:h-[340px] object-cover rounded-lg">
+                            </div>
+                        </div>
+
+                        <button id="libraryPrev" class="slider-arrow slider-arrow-left" type="button" aria-label="Previous image">
+                            <span class="material-symbols-outlined text-xl">chevron_left</span>
+                        </button>
+
+                        <button id="libraryNext" class="slider-arrow slider-arrow-right" type="button" aria-label="Next image">
+                            <span class="material-symbols-outlined text-xl">chevron_right</span>
+                        </button>
+
+                        <div id="libraryDots" class="slider-dots">
+                            <button type="button" class="slider-dot active" data-slide="0" aria-label="Image 1"></button>
+                            <button type="button" class="slider-dot" data-slide="1" aria-label="Image 2"></button>
+                            <button type="button" class="slider-dot" data-slide="2" aria-label="Image 3"></button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between px-3 py-2.5 mt-1 border-t border-border/60 text-xs">
+                        <div class="flex items-center gap-1.5 text-textMuted">
+                            <span class="material-symbols-outlined text-primary text-base">location_on</span>
+                            Central Library, Main Campus, Karvenagar
+                        </div>
+                        <span class="font-semibold text-primary">MMCOE Pune</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Operational Hours Strip -->
+<section class="bg-white border-b border-border py-4">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-md bg-surfaceLow flex items-center justify-center text-primary flex-shrink-0">
+                    <span class="material-symbols-outlined text-xl">schedule</span>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase font-bold tracking-wider text-textMuted">Operating Hours</div>
+                    <div class="text-xs font-semibold text-textMain mt-0.5">Mon - Sat · 8:00 AM - 6:00 PM</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-md bg-surfaceLow flex items-center justify-center text-primary flex-shrink-0">
+                    <span class="material-symbols-outlined text-xl">auto_stories</span>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase font-bold tracking-wider text-textMuted">Circulation Desk</div>
+                    <div class="text-xs font-semibold text-textMain mt-0.5">Book Issue, Return &amp; Fine Settlement</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-md bg-surfaceLow flex items-center justify-center text-primary flex-shrink-0">
+                    <span class="material-symbols-outlined text-xl">lan</span>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase font-bold tracking-wider text-textMuted">Architecture</div>
+                    <div class="text-xs font-semibold text-textMain mt-0.5">High-Performance TCP Engine</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Services Section -->
+<section id="services" class="py-14 bg-background border-b border-border">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+            <div>
+                <span class="text-xs font-bold text-primary uppercase tracking-widest">Key Functionalities</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-textMain mt-1">Library Services</h2>
+            </div>
+            <p class="text-xs sm:text-sm text-textMuted max-w-md">
+                Streamlined circulation, catalog search, and waitlist management driven by high-performance computer engineering algorithms.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="service-card ui-card p-5">
+                <div class="w-10 h-10 rounded-lg bg-surfaceLow text-primary flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-2xl">sync_alt</span>
+                </div>
+                <h3 class="text-base font-bold text-textMain mb-1">Circulation Desk</h3>
+                <p class="text-xs text-textMuted leading-relaxed">
+                    Automated issuing, returns, and daily fine calculations based on user category rules.
+                </p>
+            </div>
+
+            <div class="service-card ui-card p-5">
+                <div class="w-10 h-10 rounded-lg bg-surfaceLow text-primary flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-2xl">search</span>
+                </div>
+                <h3 class="text-base font-bold text-textMain mb-1">OPAC Catalogue</h3>
+                <p class="text-xs text-textMuted leading-relaxed">
+                    Instant searching across titles, authors, and ISBNs with real-time copy availability tracking.
+                </p>
+            </div>
+
+            <div class="service-card ui-card p-5">
+                <div class="w-10 h-10 rounded-lg bg-surfaceLow text-primary flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-2xl">view_list</span>
+                </div>
+                <h3 class="text-base font-bold text-textMain mb-1">DSA Waitlist Queue</h3>
+                <p class="text-xs text-textMuted leading-relaxed">
+                    Fair FIFO queue structure for reserved books, notifying the next student upon return.
+                </p>
+            </div>
+
+            <div class="service-card ui-card p-5">
+                <div class="w-10 h-10 rounded-lg bg-surfaceLow text-primary flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-2xl">terminal</span>
+                </div>
+                <h3 class="text-base font-bold text-textMain mb-1">TCP Gateway Engine</h3>
+                <p class="text-xs text-textMuted leading-relaxed">
+                    Custom Java multithreaded socket server executing transactions under sub-5ms latency.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- E-Resources Section -->
+<section id="resources" class="py-14 bg-white border-b border-border">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-8">
+            <span class="text-xs font-bold text-primary uppercase tracking-widest">Digital Learning</span>
+            <h2 class="text-2xl sm:text-3xl font-bold text-textMain mt-1">E-Resources &amp; Digital Portals</h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a href="https://mmcoe.knimbus.com/portal/v2/default/home" target="_blank" rel="noopener noreferrer" class="resource-card ui-card p-5 group flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-lg bg-surfaceLow text-primary flex items-center justify-center">
+                            <span class="material-symbols-outlined text-xl">school</span>
+                        </div>
+                        <span class="material-symbols-outlined text-textMuted group-hover:text-primary transition text-lg">open_in_new</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-textMain group-hover:text-primary transition mb-1">Knimbus Digital Library</h3>
+                    <p class="text-xs text-textMuted leading-relaxed">Subscribed e-journals, research papers, and digital courseware.</p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-border/60 text-xs font-semibold text-primary">Visit Portal &rarr;</div>
+            </a>
+
+            <a href="https://www.sciencedirect.com/" target="_blank" rel="noopener noreferrer" class="resource-card ui-card p-5 group flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-lg bg-surfaceLow text-primary flex items-center justify-center">
+                            <span class="material-symbols-outlined text-xl">science</span>
+                        </div>
+                        <span class="material-symbols-outlined text-textMuted group-hover:text-primary transition text-lg">open_in_new</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-textMain group-hover:text-primary transition mb-1">ScienceDirect</h3>
+                    <p class="text-xs text-textMuted leading-relaxed">Peer-reviewed scientific articles and engineering publications.</p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-border/60 text-xs font-semibold text-primary">Visit Portal &rarr;</div>
+            </a>
+
+            <a href="https://nptel.ac.in/" target="_blank" rel="noopener noreferrer" class="resource-card ui-card p-5 group flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-lg bg-surfaceLow text-primary flex items-center justify-center">
+                            <span class="material-symbols-outlined text-xl">video_library</span>
+                        </div>
+                        <span class="material-symbols-outlined text-textMuted group-hover:text-primary transition text-lg">open_in_new</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-textMain group-hover:text-primary transition mb-1">NPTEL Courses</h3>
+                    <p class="text-xs text-textMuted leading-relaxed">Video lectures and certification courses by top IITs and IISc.</p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-border/60 text-xs font-semibold text-primary">Visit Portal &rarr;</div>
+            </a>
+
+            <a href="https://ndl.iitkgp.ac.in/" target="_blank" rel="noopener noreferrer" class="resource-card ui-card p-5 group flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-9 h-9 rounded-lg bg-surfaceLow text-primary flex items-center justify-center">
+                            <span class="material-symbols-outlined text-xl">language</span>
+                        </div>
+                        <span class="material-symbols-outlined text-textMuted group-hover:text-primary transition text-lg">open_in_new</span>
+                    </div>
+                    <h3 class="font-bold text-sm text-textMain group-hover:text-primary transition mb-1">National Digital Library</h3>
+                    <p class="text-xs text-textMuted leading-relaxed">National repository of learning resources for all academic disciplines.</p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-border/60 text-xs font-semibold text-primary">Visit Portal &rarr;</div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Rules Quick Bar -->
+<section class="bg-surfaceLow border-b border-border py-8">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+            <h3 class="text-base font-bold text-textMain">Library Policies &amp; Guidelines</h3>
+            <p class="text-xs text-textMuted mt-0.5">Review general library decorum and circulation limits per member category.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="openModal('libraryRulesModal')" class="btn-secondary text-xs py-2 px-4 bg-white">
+                Library Rules
+            </button>
+            <button onclick="openModal('circulationRulesModal')" class="btn-primary text-xs py-2 px-4">
+                Circulation Rules
+            </button>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<!-- Footer -->
+<footer class="bg-white border-t border-border">
+    <div class="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="md:col-span-1">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <img src="logo.jpg" alt="MMCOE Logo" class="w-7 h-7 object-contain rounded">
+                    <span class="font-bold text-primary text-sm">MMCOE Library System</span>
+                </div>
+                <p class="text-xs text-textMuted leading-relaxed">
+                    Marathwada Mitra Mandal's College of Engineering, Karvenagar, Pune - 411052.
+                </p>
+                <div class="mt-3 text-xs text-textMuted space-y-1">
+                    <div>Phone: (020) 25479811</div>
+                    <div>Email: mmcoe@mmcoe.edu.in</div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold text-textMain uppercase tracking-wider mb-3">Quick Links</h4>
+                <ul class="space-y-2 text-xs text-textMuted">
+                    <li><a href="#home" class="hover:text-primary transition">Catalogue Search</a></li>
+                    <li><a href="#services" class="hover:text-primary transition">Services Overview</a></li>
+                    <li><a href="#resources" class="hover:text-primary transition">Digital E-Resources</a></li>
+                    <li><button onclick="openModal('libraryRulesModal')" class="hover:text-primary transition text-left">Rules &amp; Regulations</button></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold text-textMain uppercase tracking-wider mb-3">Portals</h4>
+                <ul class="space-y-2 text-xs text-textMuted">
+                    <li><a href="login.html?type=user" class="hover:text-primary transition">Student / Member Portal</a></li>
+                    <li><a href="login.html?type=admin" class="hover:text-primary transition">Librarian Desk</a></li>
+                    <li><a href="login.html?type=admin" class="hover:text-primary transition">System Admin Dashboard</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold text-textMain uppercase tracking-wider mb-3">Architecture</h4>
+                <p class="text-xs text-textMuted leading-relaxed">
+                    Built with HTTP Gateway, Multithreaded TCP Engine, In-Memory Waitlist DSA structures, and MySQL Database persistence.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between text-[11px] text-textMuted">
+            <div>&copy; 2026 Marathwada Mitra Mandal's College of Engineering. All rights reserved.</div>
+            <div class="mt-2 sm:mt-0">EDI Computer Engineering Project</div>
+        </div>
+    </div>
+</footer>
+
+<!-- Modal 1: Library Rules -->
+<div id="libraryRulesModal" class="modal hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center" onclick="closeModalOutside(event, 'libraryRulesModal')">
+    <div class="modal-box bg-white w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl shadow-xl border border-border" onclick="event.stopPropagation()">
+        <div class="sticky top-0 bg-white border-b border-border px-5 py-4 flex items-center justify-between z-10">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-xl">menu_book</span>
+                <h2 class="text-base font-bold text-textMain">MMCOE Library Rules &amp; Regulations</h2>
+            </div>
+            <button onclick="closeModal('libraryRulesModal')" class="p-1 rounded-md text-textMuted hover:text-textMain hover:bg-surfaceLow transition">
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <div class="p-5 space-y-2.5 text-xs">
+            <div class="flex gap-3 p-3 bg-surfaceLow border border-border rounded-md">
+                <span class="text-primary font-bold">01</span>
+                <p class="text-textMain">Keep personal belongings at the Property Counter before entering.</p>
+            </div>
+            <div class="flex gap-3 p-3 bg-white border border-border rounded-md">
+                <span class="text-primary font-bold">02</span>
+                <p class="text-textMain">Institute ID Card is mandatory for all library transactions and entry.</p>
+            </div>
+            <div class="flex gap-3 p-3 bg-surfaceLow border border-border rounded-md">
+                <span class="text-primary font-bold">03</span>
+                <p class="text-textMain">Maintain strict decorum, silence, and peace within reading areas.</p>
+            </div>
+            <div class="flex gap-3 p-3 bg-white border border-border rounded-md">
+                <span class="text-primary font-bold">04</span>
+                <p class="text-textMain">Reference materials (dictionaries, handbooks) are for reading room use only.</p>
+            </div>
+            <div class="flex gap-3 p-3 bg-surfaceLow border border-border rounded-md">
+                <span class="text-primary font-bold">05</span>
+                <p class="text-textMain">All overdue books incur a automated fine of <strong class="text-primary">Rs. 6.00 per book per day</strong>.</p>
+            </div>
+            <div class="flex gap-3 p-3 bg-white border border-border rounded-md">
+                <span class="text-primary font-bold">06</span>
+                <p class="text-textMain">In case of lost or damaged books, replacement cost must be paid by the user.</p>
+            </div>
+        </div>
+
+        <div class="border-t border-border px-5 py-3 bg-surfaceLow flex justify-end">
+            <button onclick="closeModal('libraryRulesModal')" class="btn-primary text-xs py-1.5 px-4">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Circulation Rules -->
+<div id="circulationRulesModal" class="modal hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center" onclick="closeModalOutside(event, 'circulationRulesModal')">
+    <div class="modal-box bg-white w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-xl shadow-xl border border-border" onclick="event.stopPropagation()">
+        <div class="sticky top-0 bg-white border-b border-border px-5 py-4 flex items-center justify-between z-10">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-xl">sync_alt</span>
+                <h2 class="text-base font-bold text-textMain">Circulation Policy &amp; Issue Limits</h2>
+            </div>
+            <button onclick="closeModal('circulationRulesModal')" class="p-1 rounded-md text-textMuted hover:text-textMain hover:bg-surfaceLow transition">
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <div class="p-5">
+            <p class="text-xs text-textMuted mb-4">Book borrowing limits and borrowing durations defined per user category:</p>
+
+            <div class="overflow-x-auto border border-border rounded-lg mb-4">
+                <table class="ui-table text-xs">
+                    <thead>
+                        <tr>
+                            <th>User Category</th>
+                            <th class="text-center">Book Limit</th>
+                            <th class="text-center">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-semibold">Teaching Staff</td>
+                            <td class="text-center">10 Books</td>
+                            <td class="text-center">1 Semester</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">Non-Teaching Staff</td>
+                            <td class="text-center">5 Books</td>
+                            <td class="text-center">1 Semester</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">Visiting Faculty</td>
+                            <td class="text-center">2 Books</td>
+                            <td class="text-center">15 Days</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">PG Student</td>
+                            <td class="text-center">5 Books</td>
+                            <td class="text-center">1 Month</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">UG Student</td>
+                            <td class="text-center">4 Books</td>
+                            <td class="text-center">15 Days</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-3 bg-surfaceLow border border-border rounded-md text-xs text-textMuted flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-lg">info</span>
+                <span>Overdue rate: <strong>Rs. 6.00 / day / book</strong> calculated automatically upon return.</span>
+            </div>
+        </div>
+
+        <div class="border-t border-border px-5 py-3 bg-surfaceLow flex justify-end">
+            <button onclick="closeModal('circulationRulesModal')" class="btn-primary text-xs py-1.5 px-4">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Inline JavaScript for Landing Page Interactivity -->
+<script>
+    const menuButton = document.getElementById("menuButton");
+    const mobileMenu = document.getElementById("mobileMenu");
+    const menuIcon = document.getElementById("menuIcon");
+
+    let menuOpen = false;
+
+    menuButton.addEventListener("click", () => {
+        menuOpen = !menuOpen;
+
+        if (menuOpen) {
+            mobileMenu.style.maxHeight = "500px";
+            mobileMenu.style.opacity = "1";
+            menuIcon.textContent = "close";
+        } else {
+            mobileMenu.style.maxHeight = "0px";
+            mobileMenu.style.opacity = "0";
+            menuIcon.textContent = "menu";
+        }
+    });
+
+    function closeMobileMenu() {
+        menuOpen = false;
+        mobileMenu.style.maxHeight = "0px";
+        mobileMenu.style.opacity = "0";
+        menuIcon.textContent = "menu";
+    }
+
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+        const modalBox = modal.querySelector(".modal-box");
+        if (modalBox) modalBox.scrollTop = 0;
+        closeMobileMenu();
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add("hidden");
+        document.body.classList.remove("modal-open");
+    }
+
+    function closeModalOutside(event, modalId) {
+        if (event.target.id === modalId) {
+            closeModal(modalId);
+        }
+    }
+
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            closeModal("libraryRulesModal");
+            closeModal("circulationRulesModal");
+        }
+    });
+
+    document.querySelectorAll("#mobileMenu a").forEach(link => {
+        link.addEventListener("click", closeMobileMenu);
+    });
+
+    const librarySlider = document.getElementById("librarySlider");
+    const librarySliderTrack = document.getElementById("librarySliderTrack");
+    const libraryPrev = document.getElementById("libraryPrev");
+    const libraryNext = document.getElementById("libraryNext");
+    const libraryDots = document.querySelectorAll(".slider-dot");
+
+    const totalLibrarySlides = 3;
+    let currentLibrarySlide = 0;
+
+    function updateLibrarySlider(animate = true) {
+        if (!librarySliderTrack) return;
+        librarySliderTrack.style.transition = animate ? "transform .65s cubic-bezier(.4,0,.2,1)" : "none";
+        librarySliderTrack.style.transform = `translateX(-${currentLibrarySlide * 100}%)`;
+        libraryDots.forEach((dot, index) => {
+            dot.classList.toggle("active", index === currentLibrarySlide);
+        });
+    }
+
+    function nextLibrarySlide() {
+        currentLibrarySlide = (currentLibrarySlide + 1) % totalLibrarySlides;
+        updateLibrarySlider();
+    }
+
+    function previousLibrarySlide() {
+        currentLibrarySlide = (currentLibrarySlide - 1 + totalLibrarySlides) % totalLibrarySlides;
+        updateLibrarySlider();
+    }
+
+    if (libraryNext) {
+        libraryNext.addEventListener("click", () => {
+            nextLibrarySlide();
+            resetLibraryAutoSlide();
+        });
+    }
+
+    if (libraryPrev) {
+        libraryPrev.addEventListener("click", () => {
+            previousLibrarySlide();
+            resetLibraryAutoSlide();
+        });
+    }
+
+    libraryDots.forEach(dot => {
+        dot.addEventListener("click", () => {
+            currentLibrarySlide = Number(dot.dataset.slide);
+            updateLibrarySlider();
+            resetLibraryAutoSlide();
+        });
+    });
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    if (librarySlider) {
+        librarySlider.addEventListener("touchstart", event => {
+            touchStartX = event.changedTouches[0].screenX;
+        }, { passive: true });
+
+        librarySlider.addEventListener("touchend", event => {
+            touchEndX = event.changedTouches[0].screenX;
+            const distance = touchEndX - touchStartX;
+            if (distance < -50) {
+                nextLibrarySlide();
+                resetLibraryAutoSlide();
+            } else if (distance > 50) {
+                previousLibrarySlide();
+                resetLibraryAutoSlide();
+            }
+        }, { passive: true });
+
+        let mouseStartX = 0;
+        let mouseEndX = 0;
+        let isDragging = false;
+
+        librarySlider.addEventListener("mousedown", event => {
+            isDragging = true;
+            mouseStartX = event.clientX;
+            mouseEndX = event.clientX;
+        });
+
+        librarySlider.addEventListener("mousemove", event => {
+            if (isDragging) mouseEndX = event.clientX;
+        });
+
+        librarySlider.addEventListener("mouseup", () => {
+            if (!isDragging) return;
+            isDragging = false;
+            const distance = mouseEndX - mouseStartX;
+            if (distance < -50) {
+                nextLibrarySlide();
+                resetLibraryAutoSlide();
+            } else if (distance > 50) {
+                previousLibrarySlide();
+                resetLibraryAutoSlide();
+            }
+        });
+
+        librarySlider.addEventListener("mouseleave", () => {
+            isDragging = false;
+        });
+    }
+
+    let libraryAutoSlide;
+
+    function startLibraryAutoSlide() {
+        libraryAutoSlide = setInterval(() => {
+            nextLibrarySlide();
+        }, 4500);
+    }
+
+    function resetLibraryAutoSlide() {
+        clearInterval(libraryAutoSlide);
+        startLibraryAutoSlide();
+    }
+
+    updateLibrarySlider(false);
+    startLibraryAutoSlide();
+</script>
+
+</body>
+</html>
