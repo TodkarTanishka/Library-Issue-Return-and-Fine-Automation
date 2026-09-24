@@ -1,4 +1,4 @@
-# MMCOE Library Management System — Pitch-Grade System Overhaul
+# MMCOE Library Management System
 
 An end-to-end B.Tech Computer Engineering Pitch Competition Project for **Library Issue, Return, Fine Management Automation, and Custom DSA Realization**.
 
